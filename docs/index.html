@@ -22,6 +22,8 @@
             --text-primary: #fafafa;
             --text-secondary: #a1a1aa;
             --text-tertiary: #71717a;
+            --success: #22c55e;
+            --warning: #f59e0b;
         }
 
         * {
@@ -42,7 +44,6 @@
             overflow-x: hidden;
         }
 
-        /* Background Effects */
         .bg-effects {
             position: fixed;
             top: 0;
@@ -82,7 +83,7 @@
             top: 0;
             left: 0;
             right: 0;
-            background: rgba(10, 10, 12, 0.8);
+            background: rgba(10, 10, 12, 0.9);
             backdrop-filter: blur(20px);
             z-index: 100;
             border-bottom: 1px solid rgba(255,255,255,0.05);
@@ -124,6 +125,13 @@
             color: var(--text-primary);
         }
 
+        .nav-cta {
+            background: var(--accent-primary);
+            color: white !important;
+            padding: 8px 20px;
+            border-radius: 8px;
+        }
+
         /* Hero Section */
         .hero {
             min-height: 100vh;
@@ -133,7 +141,6 @@
             justify-content: center;
             text-align: center;
             padding: 120px 40px 80px;
-            position: relative;
         }
 
         .hero-badge {
@@ -166,8 +173,8 @@
         .hero p {
             font-size: 20px;
             color: var(--text-secondary);
-            max-width: 600px;
-            margin-bottom: 48px;
+            max-width: 700px;
+            margin-bottom: 40px;
             animation: fadeInUp 0.8s ease 0.2s both;
         }
 
@@ -215,19 +222,51 @@
             border-color: var(--accent-primary);
         }
 
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
-        /* Features Section */
-        .features {
+        .btn-outline:hover {
+            border-color: var(--accent-primary);
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            padding: 40px;
+            background: var(--bg-secondary);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+
+        /* Section Styles */
+        .section {
             padding: 100px 40px;
             max-width: 1200px;
             margin: 0 auto;
@@ -251,6 +290,7 @@
             margin: 0 auto;
         }
 
+        /* Features Grid */
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -294,31 +334,153 @@
             font-size: 15px;
         }
 
-        /* Screenshot Section */
-        .screenshot {
-            padding: 100px 40px;
+        /* How It Works */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 32px;
+            margin-top: 48px;
+        }
+
+        .step {
             text-align: center;
+            padding: 32px;
         }
 
-        .screenshot-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: var(--bg-secondary);
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .screenshot-placeholder {
-            width: 100%;
-            aspect-ratio: 16/9;
-            background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
-            border-radius: 12px;
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 auto 20px;
+        }
+
+        .step h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+
+        .step p {
+            color: var(--text-secondary);
+            font-size: 15px;
+        }
+
+        /* Comparison */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 40px;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .comparison-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+        }
+
+        .comparison-table .check {
+            color: var(--success);
+            font-size: 20px;
+        }
+
+        .comparison-table .cross {
             color: var(--text-tertiary);
+            font-size: 20px;
+        }
+
+        /* Collab Section */
+        .collab {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 24px;
+            padding: 60px;
+            text-align: center;
+            margin: 40px auto;
+            max-width: 900px;
+        }
+
+        .collab h2 {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .collab p {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
             font-size: 18px;
+        }
+
+        .collab-options {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .collab-card {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            width: 200px;
+            transition: all 0.3s;
+        }
+
+        .collab-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+        }
+
+        .collab-card-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .collab-card h4 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .collab-card p {
+            font-size: 13px;
+            margin-bottom: 0;
+        }
+
+        /* FAQ */
+        .faq-item {
+            background: var(--bg-secondary);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+
+        .faq-question {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .faq-answer {
+            color: var(--text-secondary);
+            font-size: 15px;
         }
 
         /* Download Section */
@@ -328,7 +490,7 @@
         }
 
         .download-card {
-            max-width: 600px;
+            max-width: 700px;
             margin: 0 auto;
             background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%);
             border: 1px solid rgba(139, 92, 246, 0.3);
@@ -344,6 +506,7 @@
         .download-card p {
             color: var(--text-secondary);
             margin-bottom: 32px;
+            font-size: 18px;
         }
 
         .download-info {
@@ -364,23 +527,32 @@
 
         /* Footer */
         footer {
-            padding: 40px;
+            padding: 60px 40px;
             text-align: center;
             border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--text-primary);
         }
 
         footer p {
             color: var(--text-tertiary);
             font-size: 14px;
-        }
-
-        footer a {
-            color: var(--accent-secondary);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
         }
 
         /* Responsive */
@@ -405,8 +577,16 @@
                 font-size: 16px;
             }
 
-            .features, .screenshot, .download {
+            .section {
                 padding: 60px 20px;
+            }
+
+            .stats-bar {
+                gap: 30px;
+            }
+
+            .collab {
+                padding: 40px 20px;
             }
 
             .btn {
@@ -427,18 +607,21 @@
         </div>
         <ul class="nav-links">
             <li><a href="#features">Features</a></li>
-            <li><a href="#download">Download</a></li>
-            <li><a href="https://github.com/Openapps-free/novel-studio" target="_blank">GitHub</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#compare">Compare</a></li>
+            <li><a href="#contribute">Contribute</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><a href="#download" class="nav-cta">Download</a></li>
         </ul>
     </nav>
 
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-badge">
-            ✨ Open Source
+            ✨ Open Source • Free Forever
         </div>
-        <h1>Professional Novel<br>Writing Application</h1>
-        <p>A complete desktop application for novel writers with AI-powered writing assistance, world-building tools, and organizational systems.</p>
+        <h1>Write Your<br>Masterpiece</h1>
+        <p>A professional desktop application for novel writers with AI-powered writing assistance, world-building tools, and everything you need to bring your story to life.</p>
         <div class="hero-buttons">
             <a href="#download" class="btn btn-primary">
                 📥 Download for Windows
@@ -449,8 +632,28 @@
         </div>
     </section>
 
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-number">12+</div>
+            <div class="stat-label">AI Writing Modes</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Free & Open Source</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Themes</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">∞</div>
+            <div class="stat-label">Project Storage</div>
+        </div>
+    </div>
+
     <!-- Features Section -->
-    <section class="features" id="features">
+    <section class="section" id="features">
         <div class="section-header">
             <h2>Everything You Need to Write</h2>
             <p>Powerful tools designed specifically for novel writers</p>
@@ -460,55 +663,61 @@
             <div class="feature-card">
                 <div class="feature-icon">🤖</div>
                 <h3>AI Writing Assistant</h3>
-                <p>12+ AI writing modes including Continue, Expand, Rewrite, Dialogue, and more. Works with OpenAI and Anthropic APIs.</p>
+                <p>12+ AI writing modes: Continue, Expand, Summarize, Rewrite, Dialogue, Description, Action, Emotion, Analyze, Brainstorm, Outline, World-Build. Works with OpenAI & Anthropic.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">✏️</div>
                 <h3>Rich Text Editor</h3>
-                <p>Full formatting support with TipTap editor. Split view, focus mode, and typewriter mode for distraction-free writing.</p>
+                <p>Full formatting with TipTap editor. Split view, Focus Mode, Typewriter Mode for distraction-free writing.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">📊</div>
                 <h3>Story Planning</h3>
-                <p>Visual matrix view with drag-and-drop chapters and scenes. Track Goals, Conflict, and Outcome for each scene.</p>
+                <p>Visual matrix view with drag-and-drop. Track Goals, Conflict, and Outcome for each scene.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">📖</div>
                 <h3>World Codex</h3>
-                <p>Build your world with Characters, Locations, Items, Lore, and Events. Everything organized in one place.</p>
+                <p>Characters with deep profiles, Locations, Items, Lore, and Events. Build your entire universe.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🔗</div>
                 <h3>Character Relationships</h3>
-                <p>Visual relationship map showing connections between characters with types and strength indicators.</p>
+                <p>Visual relationship map showing connections between characters with types and strength.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">📅</div>
                 <h3>Timeline</h3>
-                <p>Chronological story events with visual timeline view. Filter by character or location.</p>
+                <p>Chronological story events with visual timeline. Filter by character or location.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">🏷️</div>
                 <h3>Tag Management</h3>
-                <p>Custom tags with colors to organize scenes, characters, and notes. Quick filtering across your project.</p>
+                <p>Custom colored tags to organize scenes, characters, and notes. Quick filtering.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>Research Notes</h3>
+                <p>Keep all your research in one place. Categorize by topic, search and filter easily.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">📈</div>
                 <h3>Writing Analysis</h3>
-                <p>Local text analysis with no API required. Word stats, readability, dialogue ratio, sentiment, and story structure.</p>
+                <p>Local text analysis - no API needed! Word stats, readability, dialogue ratio, sentiment, story structure.</p>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon">📜</div>
                 <h3>Revision History</h3>
-                <p>Automatic version tracking. Browse past versions and restore any previous version with one click.</p>
+                <p>Automatic version tracking. Browse past versions and restore any previous version.</p>
             </div>
 
             <div class="feature-card">
@@ -528,38 +737,282 @@
                 <h3>Themes</h3>
                 <p>Dark, Light, and Sepia modes. Easy on the eyes for long writing sessions.</p>
             </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📤</div>
+                <h3>Export Options</h3>
+                <p>Export to TXT, JSON, and HTML. Full project backup and easy sharing.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💾</div>
+                <h3>Auto-Save</h3>
+                <p>Your work is automatically saved. Never lose a word with local storage.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Your Data Stays Yours</h3>
+                <p>All data stored locally on your computer. No cloud, no subscription, no tracking.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="section" id="how-it-works">
+        <div class="section-header">
+            <h2>How It Works</h2>
+            <p>Get started in minutes</p>
+        </div>
+        
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Download & Install</h3>
+                <p>Download the .exe file from GitHub Releases. Double-click to install - it's that simple!</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Create Your Project</h3>
+                <p>Click "New Project" and give your novel a name. Set your target word count and genre.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Start Writing</h3>
+                <p>Begin writing in the Write view. Use the AI assistant to help with any part of your story.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Build Your World</h3>
+                <p>Add characters, locations, and lore in Codex. Plan your story in the Matrix view.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <h3>Export & Share</h3>
+                <p>Export your finished novel in TXT, JSON, or HTML format. Share with the world!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Compare -->
+    <section class="section" id="compare">
+        <div class="section-header">
+            <h2>Why Novel Studio?</h2>
+            <p>See how we compare to other writing tools</p>
+        </div>
+
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Novel Studio</th>
+                    <th>NovelCrafter</th>
+                    <th>Scrivener</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Price</td>
+                    <td style="color: var(--success); font-weight: 600;">Free</td>
+                    <td>$15/month</td>
+                    <td>$49 one-time</td>
+                </tr>
+                <tr>
+                    <td>AI Writing Modes</td>
+                    <td class="check">✓ 12+</td>
+                    <td class="check">✓</td>
+                    <td class="cross">✗</td>
+                </tr>
+                <tr>
+                    <td>Local AI Analysis</td>
+                    <td class="check">✓ Free</td>
+                    <td class="cross">✗</td>
+                    <td class="cross">✗</td>
+                </tr>
+                <tr>
+                    <td>Character Relationships</td>
+                    <td class="check">✓</td>
+                    <td class="check">✓</td>
+                    <td class="cross">✗</td>
+                </tr>
+                <tr>
+                    <td>Timeline View</td>
+                    <td class="check">✓</td>
+                    <td class="check">✓</td>
+                    <td class="cross">✗</td>
+                </tr>
+                <tr>
+                    <td>Revision History</td>
+                    <td class="check">✓</td>
+                    <td class="check">✓</td>
+                    <td class="check">✓</td>
+                </tr>
+                <tr>
+                    <td>Writing Sprints</td>
+                    <td class="check">✓</td>
+                    <td class="check">✓</td>
+                    <td class="cross">✗</td>
+                </tr>
+                <tr>
+                    <td>Themes</td>
+                    <td class="check">✓ 3</td>
+                    <td class="check">✓</td>
+                    <td class="check">✓</td>
+                </tr>
+                <tr>
+                    <td>Data Storage</td>
+                    <td style="color: var(--success);">Local Only</td>
+                    <td>Cloud</td>
+                    <td>Local</td>
+                </tr>
+                <tr>
+                    <td>No Subscription</td>
+                    <td class="check">✓</td>
+                    <td class="cross">✗</td>
+                    <td class="check">✓</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Contribute -->
+    <section class="section" id="contribute">
+        <div class="section-header">
+            <h2>Join Our Community</h2>
+            <p>Help make Novel Studio even better</p>
+        </div>
+
+        <div class="collab">
+            <h2>Contribute & Collaborate</h2>
+            <p>Novel Studio is open source! Whether you're a developer, writer, or just want to help, there are many ways to contribute.</p>
+            
+            <div class="collab-options">
+                <div class="collab-card">
+                    <div class="collab-card-icon">💻</div>
+                    <h4>Code</h4>
+                    <p>Fix bugs, add features</p>
+                </div>
+                <div class="collab-card">
+                    <div class="collab-card-icon">🎨</div>
+                    <h4>Design</h4>
+                    <p>UI/UX improvements</p>
+                </div>
+                <div class="collab-card">
+                    <div class="collab-card-icon">📝</div>
+                    <h4>Documentation</h4>
+                    <p>Improve guides & README</p>
+                </div>
+                <div class="collab-card">
+                    <div class="collab-card-icon">🐛</div>
+                    <h4>Report Bugs</h4>
+                    <p>Help us find issues</p>
+                </div>
+                <div class="collab-card">
+                    <div class="collab-card-icon">⭐</div>
+                    <h4>Star</h4>
+                    <p>Show your support</p>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px;">
+                <a href="https://github.com/Openapps-free/novel-studio" target="_blank" class="btn btn-primary">
+                    🌟 Star on GitHub
+                </a>
+                <a href="https://github.com/Openapps-free/novel-studio/issues" target="_blank" class="btn btn-outline" style="margin-left: 12px;">
+                    🐛 Report an Issue
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section" id="faq">
+        <div class="section-header">
+            <h2>Frequently Asked Questions</h2>
+            <p>Everything you need to know</p>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">Is Novel Studio really free?</div>
+            <div class="faq-answer">Yes! Novel Studio is 100% free and open source. No hidden fees, no subscription, no premium version. You can download, use, and modify it however you want.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">Do I need an API key for AI features?</div>
+            <div class="faq-answer">AI features require an OpenAI or Anthropic API key, which you can get from their websites. However, our Writing Analysis feature works completely offline - no API needed!</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">Where is my data stored?</div>
+            <div class="faq-answer">All your data is stored locally on your computer. Nothing is sent to the cloud. Your novel, characters, and notes stay private on your machine.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">Can I use Novel Studio for commercial projects?</div>
+            <div class="faq-answer">Yes! Novel Studio is licensed under MIT. You can use it for personal or commercial projects without any restrictions.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">What platforms does it support?</div>
+            <div class="faq-answer">Currently Novel Studio supports Windows. Mac and Linux versions are planned for future releases.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">How do I report bugs or request features?</div>
+            <div class="faq-answer">Head to our GitHub Issues page to report bugs or suggest new features. We welcome contributions from the community!</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">Can I collaborate with others on a project?</div>
+            <div class="faq-answer">Currently Novel Studio is designed for single-user local editing. You can export your project as JSON and share it with collaborators.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">What's the difference between Novel Studio and other writing apps?</div>
+            <div class="faq-answer">Novel Studio combines AI assistance, world-building tools, and writing analysis in one package - all for free. Unlike subscription-based services, you own your data forever.</div>
         </div>
     </section>
 
     <!-- Download Section -->
     <section class="download" id="download">
         <div class="download-card">
-            <h2>Download Novel Studio</h2>
-            <p>Start writing your masterpiece today. It's free and open source!</p>
-            <a href="https://github.com/Openapps-free/novel-studio/releases" class="btn btn-primary">
-                📥 Download Latest Release
+            <h2>Start Writing Today</h2>
+            <p>Download Novel Studio and start writing your masterpiece. It's free, forever!</p>
+            <a href="https://github.com/Openapps-free/novel-studio/releases" class="btn btn-primary" style="font-size: 18px; padding: 20px 40px;">
+                📥 Download Latest Version
             </a>
             <div class="download-info">
                 <span>💻 Windows</span>
                 <span>📦 Open Source</span>
-                <span>🆓 Free</span>
+                <span>🆓 Free Forever</span>
+                <span>🔒 Local Storage</span>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
     <footer>
+        <div class="footer-links">
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How It Works</a>
+            <a href="#contribute">Contribute</a>
+            <a href="#faq">FAQ</a>
+            <a href="https://github.com/Openapps-free/novel-studio" target="_blank">GitHub</a>
+            <a href="https://github.com/Openapps-free/novel-studio/releases" target="_blank">Download</a>
+        </div>
         <p>
             © 2026 Novel Studio. Built with ❤️ by <a href="https://github.com/Openapps-free" target="_blank">Openapps-free</a>
         </p>
         <p style="margin-top: 8px;">
-            <a href="https://github.com/Openapps-free/novel-studio" target="_blank">GitHub</a> • 
-            <a href="#">License</a>
+            Licensed under <a href="https://github.com/Openapps-free/novel-studio/blob/main/LICENSE" target="_blank">MIT License</a>
         </p>
     </footer>
 
     <script>
-        // Smooth scroll for anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -569,11 +1022,7 @@
             });
         });
 
-        // Add fade-in animation on scroll
-        const observerOptions = {
-            threshold: 0.1
-        };
-
+        const observerOptions = { threshold: 0.1 };
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -583,11 +1032,11 @@
             });
         }, observerOptions);
 
-        document.querySelectorAll('.feature-card').forEach(card => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            card.style.transition = 'opacity 0.6s, transform 0.6s';
-            observer.observe(card);
+        document.querySelectorAll('.feature-card, .step, .faq-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'opacity 0.6s, transform 0.6s';
+            observer.observe(el);
         });
     </script>
 </body>
