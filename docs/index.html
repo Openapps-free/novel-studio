@@ -106,6 +106,13 @@
             align-items: center;
             justify-content: center;
             font-size: 18px;
+            overflow: hidden;
+        }
+        
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .nav-links {
@@ -155,6 +162,35 @@
             color: var(--accent-secondary);
             margin-bottom: 32px;
             animation: fadeInUp 0.8s ease;
+        }
+
+        .hero-screenshots {
+            display: flex;
+            gap: 16px;
+            margin-top: 48px;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        .hero-screenshot {
+            width: 320px;
+            height: 180px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s;
+        }
+
+        .hero-screenshot:hover {
+            transform: translateY(-4px);
+        }
+
+        .hero-screenshot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .hero h1 {
@@ -602,7 +638,18 @@
     <!-- Navigation -->
     <nav>
         <div class="logo">
-            <div class="logo-icon">✏️</div>
+            <div class="logo-icon">
+                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="40" height="40" rx="10" fill="url(#logoGrad)"/>
+                    <path d="M12 28V12h4l4 8 4-8h4v16h-4v-10l-4 8-4-8v10h-4z" fill="white"/>
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
+                            <stop stop-color="#8b5cf6"/>
+                            <stop offset="1" stop-color="#6366f1"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
             Novel Studio
         </div>
         <ul class="nav-links">
@@ -629,6 +676,18 @@
             <a href="https://github.com/Openapps-free/novel-studio" target="_blank" class="btn btn-secondary">
                 ⭐ Star on GitHub
             </a>
+        </div>
+
+        <div class="hero-screenshots">
+            <div class="hero-screenshot">
+                <img src="https://ph-files.imgix.net/f8d47a33-c19e-49a3-bed0-318a05506685.png?auto=compress&w=640&h=360&fit=crop" alt="Novel Studio Editor" onerror="this.style.display='none'">
+            </div>
+            <div class="hero-screenshot">
+                <img src="https://ph-files.imgix.net/98070c02-e39e-4b7b-8f2c-bdf38274c7ea.png?auto=compress&w=640&h=360&fit=crop" alt="Novel Studio Overview" onerror="this.style.display='none'">
+            </div>
+            <div class="hero-screenshot">
+                <img src="https://ph-files.imgix.net/eefe5de4-ffcd-498c-aed2-d16788998bc8.png?auto=compress&w=640&h=360&fit=crop" alt="Novel Studio Features" onerror="this.style.display='none'">
+            </div>
         </div>
     </section>
 
