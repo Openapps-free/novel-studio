@@ -98,21 +98,28 @@
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
             overflow: hidden;
+            flex-shrink: 0;
         }
         
-        .logo-icon img {
+        .logo-icon svg {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+        }
+        
+        .logo-text {
+            font-weight: 700;
+            font-size: 22px;
+            background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #6366f1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .nav-links {
@@ -610,18 +617,23 @@
     <nav>
         <div class="logo">
             <div class="logo-icon">
-                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="40" height="40" rx="10" fill="url(#logoGrad)"/>
-                    <path d="M12 28V12h4l4 8 4-8h4v16h-4v-10l-4 8-4-8v10h-4z" fill="white"/>
+                <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                        <linearGradient id="logoGrad" x1="0" y1="0" x2="40" y2="40">
-                            <stop stop-color="#8b5cf6"/>
-                            <stop offset="1" stop-color="#6366f1"/>
+                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#a855f7"/>
+                            <stop offset="50%" stop-color="#8b5cf6"/>
+                            <stop offset="100%" stop-color="#6366f1"/>
+                        </linearGradient>
+                        <linearGradient id="logoPen" x1="20%" y1="0%" x2="80%" y2="100%">
+                            <stop offset="0%" stop-color="#ffffff"/>
+                            <stop offset="100%" stop-color="#e2e8f0"/>
                         </linearGradient>
                     </defs>
+                    <rect width="44" height="44" rx="12" fill="url(#logoGrad)"/>
+                    <path d="M14 32V12h5l5 10 5-10h5v20h-5v-12l-5 10-5-10v12h-5z" fill="url(#logoPen)"/>
                 </svg>
             </div>
-            Novel Studio
+            <span class="logo-text">Novel Studio</span>
         </div>
         <ul class="nav-links">
             <li><a href="#features">Features</a></li>
@@ -657,16 +669,20 @@
             <div class="stat-label">AI Writing Modes</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">100%</div>
-            <div class="stat-label">Free & Open Source</div>
-        </div>
-        <div class="stat-item">
             <div class="stat-number">8</div>
             <div class="stat-label">Genre Templates</div>
         </div>
         <div class="stat-item">
             <div class="stat-number">6</div>
             <div class="stat-label">Export Formats</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">4</div>
+            <div class="stat-label">AI Providers</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Free Forever</div>
         </div>
     </div>
 
@@ -681,8 +697,111 @@
             <div class="feature-card">
                 <div class="feature-icon">🤖</div>
                 <h3>AI Writing Assistant</h3>
-                <p>22+ AI writing modes: Continue, Expand, Summarize, Rewrite, Dialogue, Description, Action, Emotion, Analyze, Brainstorm, Outline, World-Build, Character Bio, Backstory, Plot Twist, and more. Works with OpenAI, Anthropic, Ollama & LM Studio.</p>
+                <p><strong>22+ AI modes</strong> to help with every aspect of your story. Continue writing, expand scenes, rewrite for impact, improve dialogue, add description, create action sequences, deepen emotions, analyze your writing, brainstorm ideas, create outlines, and build your world. <strong>Works with OpenAI (GPT-4), Anthropic (Claude), Ollama, and LM Studio.</strong> Use cloud APIs for advanced features or local models for complete privacy.</p>
             </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📋</div>
+                <h3>Genre Templates</h3>
+                <p><strong>8 proven story structures</strong> to jump-start your novel. Fantasy Hero's Journey, Romance Beats, Thriller Structure, Sci-Fi Three Act, Mystery Whipplet, Horror Structure, Literary Fiction, and more. Each template includes detailed story beats with writing prompts to guide you through every chapter.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">✏️</div>
+                <h3>Rich Text Editor</h3>
+                <p>Professional writing environment with <strong>TipTap editor</strong>. Full formatting support including bold, italic, headers, lists, and more. Features include <strong>Split View</strong> for writing and referencing simultaneously, <strong>Focus Mode</strong> for distraction-free writing, and <strong>Typewriter Mode</strong> that keeps your cursor centered while you write.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📤</div>
+                <h3>Export Options</h3>
+                <p><strong>6 export formats</strong> for any need: <strong>PDF</strong> (print-ready A4 documents), <strong>DOCX</strong> (Microsoft Word), <strong>EPUB</strong> (eBook for e-readers), <strong>TXT</strong> (plain text), <strong>JSON</strong> (full backup), and <strong>HTML</strong> (web document). Professional formatting with proper chapter breaks and scene separators.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏁</div>
+                <h3>NaNoWriMo Mode</h3>
+                <p>Built-in writing goal tracker designed for <strong>NaNoWriMo</strong> and daily writing habits. Set your <strong>daily word goal</strong> and <strong>session goal</strong>. Track progress with visual progress bars, see words-per-day needed to reach your target, and maintain writing streaks. Stay motivated throughout your novel project.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💾</div>
+                <h3>Backup & Restore</h3>
+                <p>Never lose your work. <strong>Export your entire workspace</strong> to a JSON file for safekeeping. Import backups to restore all projects, characters, locations, notes, and settings. Perfect for moving between computers or as a disaster recovery solution.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Story Planning Matrix</h3>
+                <p>Visual chapter and scene organization with <strong>drag-and-drop</strong>. Track <strong>Scene Goals</strong> (what the scene should achieve), <strong>Conflict</strong> (the tension driving the scene), and <strong>Outcome</strong> (how it resolves). See your entire story structure at a glance and easily reorder scenes.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📖</div>
+                <h3>World Codex</h3>
+                <p>Build your entire fictional world in one place. Create detailed profiles for <strong>Characters</strong> (appearance, backstory, motivation, arc), <strong>Locations</strong> (climate, culture, history, population), <strong>Items</strong> (origin, powers, history), <strong>Lore</strong> (world-building rules and history), and <strong>Events</strong> (timeline of story events).</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔗</div>
+                <h3>Character Relationships</h3>
+                <p>Visual relationship map with <strong>draggable character nodes</strong>. Define relationship types (family, friend, enemy, romantic, mentor) and strength (strong, weak, complicated). See how all your characters connect at a glance. Color-coded connections make complex character webs easy to understand.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <h3>Visual Timeline</h3>
+                <p>Chronological story events with <strong>year-grouped visual timeline</strong>. Add events with dates and descriptions. <strong>Click-to-edit</strong> for quick updates. Filter by character or location. Perfect for tracking complex plots across multiple timelines or building history for your world.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🏷️</div>
+                <h3>Tag Management</h3>
+                <p>Organize with <strong>custom colored tags</strong>. Create tags for any category: POV character, setting, plot thread, status, or custom categories. Apply multiple tags to scenes, characters, and notes. <strong>Quick filtering</strong> lets you find related content instantly.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📚</div>
+                <h3>Research Notes</h3>
+                <p>Keep all your research in one organized place. <strong>Categorize by topic</strong> with unlimited categories. <strong>Search and filter</strong> to find what you need quickly. Link notes to characters, locations, or scenes. Perfect for historical research, world-building details, or plot inspiration.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📈</div>
+                <h3>Writing Analysis (Local)</h3>
+                <p>Advanced text analysis that works <strong>completely offline - no API needed</strong>. Get detailed statistics including word count, sentence complexity, readability scores (Flesch-Kincaid), dialogue-to-description ratio, passive voice detection, and sentiment analysis. Includes story structure detection (Three-Act, Hero's Journey).</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">📜</div>
+                <h3>Revision History</h3>
+                <p>Automatic version tracking for every scene. <strong>Browse past versions</strong> with timestamps, see what changed, and <strong>restore any previous version</strong> with one click. Never worry about accidentally deleting content or making changes you regret.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>AI Chat</h3>
+                <p>Have a conversation with AI about your story. <strong>Ask questions</strong> about plot holes, character motivations, or world-building. Get writing advice, brainstorm new directions, or get feedback on scenes. Context-aware responses that understand your story.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Writing Sprints</h3>
+                <p>Timed writing sessions to boost productivity. Set a <strong>word count goal</strong> and time limit. The sprint tracks your progress in real-time. Great for beating writer's block or just focusing on getting words down.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🎨</div>
+                <h3>Themes</h3>
+                <p>Three beautiful themes to suit your writing environment: <strong>Dark Mode</strong> (default, easy on the eyes), <strong>Light Mode</strong> (bright and clear), and <strong>Sepia Mode</strong> (warm, reduces eye strain for long sessions). Customizable font size and family.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">🔒</div>
+                <h3>Local-First Privacy</h3>
+                <p><strong>All data stored locally</strong> on your computer. No cloud storage, no subscription, no tracking. Your novel, characters, and notes stay private on your machine. You're in complete control of your data.</p>
+            </div>
+        </div>
 
             <div class="feature-card">
                 <div class="feature-icon">📋</div>
@@ -798,38 +917,44 @@
     <section class="section" id="how-it-works">
         <div class="section-header">
             <h2>How It Works</h2>
-            <p>Get started in minutes</p>
+            <p>Get started in minutes - from download to first chapter</p>
         </div>
         
         <div class="steps">
             <div class="step">
                 <div class="step-number">1</div>
                 <h3>Download & Install</h3>
-                <p>Download the .exe file from GitHub Releases. Double-click to install - it's that simple!</p>
+                <p>Download the .exe file from GitHub Releases. Double-click to install - no admin required, no complicated setup. The app is ready to use in seconds.</p>
             </div>
 
             <div class="step">
                 <div class="step-number">2</div>
                 <h3>Create Your Project</h3>
-                <p>Click "New Project" and give your novel a name. Set your target word count and genre.</p>
+                <p>Click "New Project" and give your novel a name. Set your target word count (50,000 for a novel, more for epic). Optionally choose a genre template to get started with proven story beats.</p>
             </div>
 
             <div class="step">
                 <div class="step-number">3</div>
-                <h3>Start Writing</h3>
-                <p>Begin writing in the Write view. Use the AI assistant to help with any part of your story.</p>
+                <h3>Build Your World</h3>
+                <p>Add characters with detailed profiles, create locations with history and culture, and build your lore. The Codex keeps all your world-building in one organized place.</p>
             </div>
 
             <div class="step">
                 <div class="step-number">4</div>
-                <h3>Build Your World</h3>
-                <p>Add characters, locations, and lore in Codex. Plan your story in the Matrix view.</p>
+                <h3>Plan Your Story</h3>
+                <p>Use the Matrix view to organize chapters and scenes. Track goals, conflicts, and outcomes for each scene. Drag and drop to reorder as your story evolves.</p>
             </div>
 
             <div class="step">
                 <div class="step-number">5</div>
+                <h3>Start Writing</h3>
+                <p>Begin writing in the Write view. Use the AI assistant to help with any part of your story - continue writing, improve dialogue, expand descriptions, or brainstorm. Enable Focus Mode for distraction-free writing.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">6</div>
                 <h3>Export & Share</h3>
-                <p>Export your finished novel in TXT, JSON, or HTML format. Share with the world!</p>
+                <p>When your novel is ready, export in your preferred format. PDF for printing, DOCX for editing, EPUB for e-readers, or JSON for backup. Share your finished work with the world!</p>
             </div>
         </div>
     </section>
@@ -981,47 +1106,57 @@
     <section class="section" id="faq">
         <div class="section-header">
             <h2>Frequently Asked Questions</h2>
-            <p>Everything you need to know</p>
+            <p>Everything you need to know about Novel Studio</p>
         </div>
 
         <div class="faq-item">
-            <div class="faq-question">Is Novel Studio really free?</div>
-            <div class="faq-answer">Yes! Novel Studio is 100% free and open source. No hidden fees, no subscription, no premium version. You can download, use, and modify it however you want.</div>
+            <div class="faq-question">Is Novel Studio really free? What about hidden costs?</div>
+            <div class="faq-answer">Yes! Novel Studio is <strong>100% free and open source</strong>. No hidden fees, no subscription, no premium version, no paid features. You can download, use, and modify it however you want. Ever. Forever. No catch.</div>
         </div>
 
         <div class="faq-item">
             <div class="faq-question">Do I need an API key for AI features?</div>
-            <div class="faq-answer">AI features require an OpenAI or Anthropic API key, which you can get from their websites. However, our Writing Analysis feature works completely offline - no API needed!</div>
+            <div class="faq-answer">It depends on which AI features you want to use: <strong>Cloud AI</strong> (GPT-4, Claude) requires an API key from OpenAI or Anthropic. <strong>Local AI</strong> (Ollama, LM Studio) works without any API key - just install the software. Our <strong>Writing Analysis</strong> feature works completely offline - no API needed!</div>
         </div>
 
         <div class="faq-item">
-            <div class="faq-question">Where is my data stored?</div>
-            <div class="faq-answer">All your data is stored locally on your computer. Nothing is sent to the cloud. Your novel, characters, and notes stay private on your machine.</div>
+            <div class="faq-question">What platforms does Novel Studio support?</div>
+            <div class="faq-answer">Currently Novel Studio supports <strong>Windows</strong> (x64). The app is built with Tauri, so Mac and Linux versions are technically possible and planned for future releases. The core functionality remains the same across all platforms.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">Where is my data stored? Is it safe?</div>
+            <div class="faq-answer">All your data is stored <strong>locally on your computer</strong>. Nothing is sent to the cloud. Your novel, characters, locations, notes, and settings stay private on your machine. We don't collect any telemetry or tracking data.</div>
         </div>
 
         <div class="faq-item">
             <div class="faq-question">Can I use Novel Studio for commercial projects?</div>
-            <div class="faq-answer">Yes! Novel Studio is licensed under MIT. You can use it for personal or commercial projects without any restrictions.</div>
+            <div class="faq-answer">Yes! Novel Studio is licensed under <strong>MIT License</strong>. You can use it for personal or commercial projects without any restrictions. The content you create is 100% yours.</div>
         </div>
 
         <div class="faq-item">
-            <div class="faq-question">What platforms does it support?</div>
-            <div class="faq-answer">Currently Novel Studio supports Windows. Mac and Linux versions are planned for future releases.</div>
-        </div>
-
-        <div class="faq-item">
-            <div class="faq-question">How do I report bugs or request features?</div>
-            <div class="faq-answer">Head to our GitHub Issues page to report bugs or suggest new features. We welcome contributions from the community!</div>
+            <div class="faq-question">How do I get started with Novel Studio?</div>
+            <div class="faq-answer">Simple: 1) Download the .exe from GitHub Releases, 2) Double-click to install, 3) Create your first project, 4) Start writing! The app includes tooltips and the built-in templates guide you through the writing process.</div>
         </div>
 
         <div class="faq-item">
             <div class="faq-question">Can I collaborate with others on a project?</div>
-            <div class="faq-answer">Currently Novel Studio is designed for single-user local editing. You can export your project as JSON and share it with collaborators.</div>
+            <div class="faq-answer">Currently Novel Studio is designed for <strong>single-user local editing</strong>. You can export your project as JSON and share it with collaborators who can then import it into their own copy. Real-time collaboration is on our future roadmap.</div>
         </div>
 
         <div class="faq-item">
             <div class="faq-question">What's the difference between Novel Studio and other writing apps?</div>
-            <div class="faq-answer">Novel Studio combines AI assistance, world-building tools, and writing analysis in one package - all for free. Unlike subscription-based services, you own your data forever.</div>
+            <div class="faq-answer">Novel Studio combines AI assistance, world-building tools, writing analysis, and project management in one package - all <strong>for free</strong>. Unlike subscription-based services, you own your data forever. Unlike basic editors, it has professional-grade features for novel writers specifically.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">How do I report bugs or request features?</div>
+            <div class="faq-answer">Head to our <strong>GitHub Issues page</strong> to report bugs or suggest new features. We welcome contributions from the community! Whether you're a developer, designer, or writer, there are ways to help improve Novel Studio.</div>
+        </div>
+
+        <div class="faq-item">
+            <div class="faq-question">What export formats can I use?</div>
+            <div class="faq-answer">Novel Studio supports <strong>6 export formats</strong>: PDF (print-ready), DOCX (Microsoft Word), EPUB (eBook), TXT (plain text), JSON (full backup), and HTML (web document). All exports include proper chapter breaks and formatting.</div>
         </div>
     </section>
 
