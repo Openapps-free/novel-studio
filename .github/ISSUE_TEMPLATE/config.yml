@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/Openapps-free/novel-studio/discussions
+    about: For general questions and community chat
+  - name: 📖 Wiki
+    url: https://github.com/Openapps-free/novel-studio/wiki
+    about: For documentation
