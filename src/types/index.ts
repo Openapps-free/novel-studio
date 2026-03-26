@@ -13,7 +13,7 @@ export type CodexType = "character" | "location" | "item" | "lore" | "event";
 export type Theme = "dark" | "light" | "sepia";
 
 // API Provider
-export type AIProvider = "openai" | "anthropic";
+export type AIProvider = "openai" | "anthropic" | "ollama" | "lmstudio";
 
 // Scene Entity
 export interface Scene {
@@ -189,12 +189,17 @@ export interface AppSettings {
   sessionGoal: number;
   apiKey: string;
   apiProvider: AIProvider;
+  localModel: string;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
   spellCheck: boolean;
   showWordCount: boolean;
   showCharacterCount: boolean;
+  nanoWriMoMode: boolean;
+  nanoWriMoTarget: number;
+  dailyWords: number;
+  lastWritingDate: string;
 }
 
 // Writing Session
@@ -217,7 +222,26 @@ export type AIRequestType =
   | "analyze"
   | "brainstorm"
   | "outline"
-  | "worldbuild";
+  | "worldbuild"
+  | "character_bio"
+  | "plot_twist"
+  | "scene_setup"
+  | "chapter_summary"
+  | "title_suggestion"
+  | "blurb"
+  | "backstory"
+  | "character_voice"
+  | "conflict_ideas"
+  | "ending_suggestion";
+
+export interface AIModelConfig {
+  id: string;
+  name: string;
+  provider: AIProvider;
+  maxTokens: number;
+  description: string;
+  recommendedFor: string[];
+}
 
 export interface AIRequest {
   type: AIRequestType;
@@ -286,7 +310,7 @@ export interface ExportOptions {
 }
 
 // Navigation
-export type ViewType = "overview" | "write" | "plan" | "codex" | "timeline" | "characters" | "tags" | "research" | "analyze" | "revisions" | "chat" | "settings";
+export type ViewType = "overview" | "write" | "plan" | "codex" | "timeline" | "characters" | "tags" | "research" | "analyze" | "revisions" | "chat" | "settings" | "templates";
 
 // Stats
 export interface ProjectStats {

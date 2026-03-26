@@ -1,47 +1,8 @@
+import { useState } from "react";
 import { useStore } from "../store";
-import { exportToTXT, exportToJSON } from "../services/storage";
-import { ProjectWithRelations } from "../types";
-
-function generateHTML(project: ProjectWithRelations): string {
-  let html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${project.title}</title>
-  <style>
-    body { font-family: Georgia, serif; max-width: 800px; margin: 0 auto; padding: 40px; line-height: 1.8; }
-    h1 { text-align: center; margin-bottom: 40px; }
-    h2 { margin-top: 40px; page-break-before: always; }
-    h3 { margin-top: 30px; }
-    p { text-indent: 2em; margin-bottom: 1em; }
-    .metadata { text-align: center; color: #666; margin-bottom: 40px; }
-  </style>
-</head>
-<body>
-  <h1>${project.title}</h1>
-  <div class="metadata">
-    <p>Status: ${project.status}</p>
-    <p>Target: ${project.targetWordCount} words</p>
-  </div>`;
-
-  if (project.synopsis) {
-    html += `\n  <h3>Synopsis</h3>\n  <p>${project.synopsis}</p>`;
-  }
-
-  for (const chapter of project.chapters) {
-    html += `\n  <h2>${chapter.title}</h2>`;
-    const chapterScenes = project.scenes.filter(s => s.chapterId === chapter.id);
-    for (const scene of chapterScenes) {
-      html += `\n  <h3>${scene.title}</h3>`;
-      if (scene.content) {
-        html += `\n  <p>${scene.content.replace(/\n\n/g, '</p><p>')}</p>`;
-      }
-    }
-  }
-
-  html += `\n</body>\n</html>`;
-  return html;
-}
+import { exportProject, downloadFile, ExportFormat } from "../services/export";
+import { downloadWorkspaceBackup, importWorkspaceFromJSON } from "../services/storage";
+import { LOCAL_MODELS, CLOUD_MODELS } from "../services/ai";
 
 export function SettingsView() {
   const { 
@@ -51,54 +12,24 @@ export function SettingsView() {
     getProject,
     writingSession,
     resetSession,
+    workspace,
+    setWorkspaceDirect,
   } = useStore();
   
   const project = getProject();
-  
-  const handleExportTXT = () => {
-    if (!project) return;
-    const content = exportToTXT(project);
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${project.title}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
 
-  const handleExportJSON = () => {
+  const handleExport = async (format: ExportFormat) => {
     if (!project) return;
-    const content = exportToJSON(project);
-    const blob = new Blob([content], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${project.title}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExportHTML = () => {
-    if (!project) return;
-    const content = generateHTML(project);
-    const blob = new Blob([content], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${project.title}.html`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleExportPDF = () => {
-    if (!project) return;
-    const html = generateHTML(project);
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.print();
+    setExporting(format);
+    try {
+      const result = await exportProject(project, format);
+      downloadFile(result);
+    } catch (error) {
+      console.error("Export failed:", error);
+      alert(`Export failed: ${error}`);
+    } finally {
+      setExporting(null);
     }
   };
 
@@ -180,26 +111,82 @@ export function SettingsView() {
 
       <div className="settings-section">
         <h3>AI Configuration</h3>
+        
         <div className="setting-item">
-          <label>API Provider</label>
+          <label>AI Provider</label>
           <select 
             value={settings.apiProvider} 
-            onChange={(e) => updateSettings({ apiProvider: e.target.value as "openai" | "anthropic" })}
+            onChange={(e) => updateSettings({ apiProvider: e.target.value as any })}
           >
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
+            <option value="openai">OpenAI (GPT-4)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="ollama">Ollama (Local)</option>
+            <option value="lmstudio">LM Studio (Local)</option>
           </select>
         </div>
-        <div className="setting-item">
-          <label>API Key</label>
-          <input 
-            type="password" 
-            value={settings.apiKey}
-            onChange={(e) => updateSettings({ apiKey: e.target.value })}
-            placeholder={settings.apiProvider === "openai" ? "sk-..." : "sk-ant-..."}
-          />
-          <small>{settings.apiProvider === "openai" ? "Get key from openai.com/api-key" : "Get key from anthropic.com"}</small>
-        </div>
+
+        {(settings.apiProvider === "openai" || settings.apiProvider === "anthropic") && (
+          <div className="setting-item">
+            <label>Cloud Model</label>
+            <select 
+              value={settings.localModel}
+              onChange={(e) => updateSettings({ localModel: e.target.value })}
+            >
+              {settings.apiProvider === "openai" && CLOUD_MODELS.filter(m => m.provider === "openai").map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+              {settings.apiProvider === "anthropic" && CLOUD_MODELS.filter(m => m.provider === "anthropic").map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {(settings.apiProvider === "ollama" || settings.apiProvider === "lmstudio") && (
+          <div className="setting-item">
+            <label>Local Model</label>
+            <select 
+              value={settings.localModel}
+              onChange={(e) => updateSettings({ localModel: e.target.value })}
+            >
+              {LOCAL_MODELS.filter(m => m.provider === settings.apiProvider).map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </select>
+            <small style={{ gridColumn: "1 / -1", marginTop: "-12px" }}>
+              {settings.apiProvider === "ollama" 
+                ? "Make sure Ollama is running: ollama serve" 
+                : "Make sure LM Studio server is enabled (Server tab)"}
+            </small>
+          </div>
+        )}
+
+        {(settings.apiProvider === "openai" || settings.apiProvider === "anthropic") && (
+          <div className="setting-item">
+            <label>API Key</label>
+            <input 
+              type="password" 
+              value={settings.apiKey}
+              onChange={(e) => updateSettings({ apiKey: e.target.value })}
+              placeholder={settings.apiProvider === "openai" ? "sk-..." : "sk-ant-..."}
+            />
+            <small>{settings.apiProvider === "openai" ? "Get key from openai.com/api-key" : "Get key from anthropic.com"}</small>
+          </div>
+        )}
+
+        {(settings.apiProvider === "ollama" || settings.apiProvider === "lmstudio") && (
+          <div className="ai-status-card">
+            <div className="ai-status-header">
+              <span className="ai-status-icon">🖥️</span>
+              <span className="ai-status-title">Local AI Ready</span>
+            </div>
+            <p className="ai-status-desc">
+              {settings.apiProvider === "ollama" 
+                ? "Ollama is running locally. No API key needed - your data stays on your machine."
+                : "LM Studio is running locally. Your data stays on your machine."}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="settings-section">
@@ -207,25 +194,101 @@ export function SettingsView() {
         <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
           Choose a format to export your manuscript
         </p>
-        <div className="export-buttons" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-          <button className="btn btn-secondary" onClick={handleExportTXT}>
-            📄 TXT (Plain Text)
+        <div className="export-options">
+          <button 
+            className="export-btn" 
+            onClick={() => handleExport("pdf")}
+            disabled={!project || exporting !== null}
+          >
+            <span className="export-icon">📄</span>
+            <span className="export-label">PDF</span>
+            <span className="export-desc">Print-ready document</span>
           </button>
-          <button className="btn btn-secondary" onClick={handleExportHTML}>
-            🌐 HTML (Web Page)
+          <button 
+            className="export-btn" 
+            onClick={() => handleExport("docx")}
+            disabled={!project || exporting !== null}
+          >
+            <span className="export-icon">📝</span>
+            <span className="export-label">DOCX</span>
+            <span className="export-desc">Microsoft Word</span>
           </button>
-          <button className="btn btn-secondary" onClick={handleExportPDF}>
-            📑 PDF (Print via Browser)
+          <button 
+            className="export-btn" 
+            onClick={() => handleExport("txt")}
+            disabled={!project || exporting !== null}
+          >
+            <span className="export-icon">📃</span>
+            <span className="export-label">TXT</span>
+            <span className="export-desc">Plain text</span>
           </button>
-          <button className="btn btn-secondary" onClick={handleExportJSON}>
-            💾 JSON (Backup)
+          <button 
+            className="export-btn" 
+            onClick={() => handleExport("html")}
+            disabled={!project || exporting !== null}
+          >
+            <span className="export-icon">🌐</span>
+            <span className="export-label">HTML</span>
+            <span className="export-desc">Web page</span>
+          </button>
+          <button 
+            className="export-btn" 
+            onClick={() => handleExport("epub")}
+            disabled={!project || exporting !== null}
+          >
+            <span className="export-icon">📚</span>
+            <span className="export-label">EPUB</span>
+            <span className="export-desc">eBook format</span>
+          </button>
+          <button 
+            className="export-btn" 
+            onClick={() => handleExport("json")}
+            disabled={!project || exporting !== null}
+          >
+            <span className="export-icon">💾</span>
+            <span className="export-label">JSON</span>
+            <span className="export-desc">Full backup</span>
           </button>
         </div>
-        <div style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
-          <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>
-            💡 Tip: Use HTML export and open in Microsoft Word to save as DOCX
-          </span>
+      </div>
+
+      <div className="settings-section">
+        <h3>Backup & Restore</h3>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '16px', fontSize: '14px' }}>
+          Create a backup of all your projects and data
+        </p>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={() => downloadWorkspaceBackup(workspace)}>
+            💾 Download Backup
+          </button>
+          <label className="btn btn-secondary" style={{ cursor: 'pointer' }}>
+            📂 Restore Backup
+            <input 
+              type="file" 
+              accept=".json" 
+              style={{ display: 'none' }}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                
+                if (!confirm("This will replace ALL current data. Are you sure?")) return;
+                
+                try {
+                  const text = await file.text();
+                  const imported = importWorkspaceFromJSON(text);
+                  setWorkspaceDirect(imported);
+                  alert("Backup restored successfully!");
+                } catch (error) {
+                  console.error("Restore failed:", error);
+                  alert("Failed to restore backup. Invalid file format.");
+                }
+              }}
+            />
+          </label>
         </div>
+        <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginTop: '12px' }}>
+          ⚠️ Restoring a backup will replace all current projects and data.
+        </p>
       </div>
 
       <div className="settings-section">

@@ -16,6 +16,7 @@ const navItems: { id: ViewType; icon: string; label: string }[] = [
   { id: "characters", icon: "🔗", label: "Characters" },
   { id: "tags", icon: "🏷️", label: "Tags" },
   { id: "research", icon: "📚", label: "Research" },
+  { id: "templates", icon: "📋", label: "Templates" },
   { id: "analyze", icon: "📈", label: "Analyze" },
   { id: "revisions", icon: "📜", label: "History" },
   { id: "chat", icon: "💬", label: "AI Chat" },
@@ -42,6 +43,9 @@ export function Layout({ children }: LayoutProps) {
     reorderChapters,
     updateProject,
     updateChapter,
+    deleteProject,
+    deleteChapter,
+    deleteScene,
   } = useStore();
   
   const [draggingChapter, setDraggingChapter] = useState<string | null>(null);
@@ -88,10 +92,23 @@ export function Layout({ children }: LayoutProps) {
             <div
               key={p.id}
               className={`project-item ${p.id === selectedProjectId ? "active" : ""}`}
-              onClick={() => selectProject(p.id)}
             >
-              <span className="project-name">{p.title}</span>
-              <span className="project-status">{p.status}</span>
+              <div className="project-item-content" onClick={() => selectProject(p.id)}>
+                <span className="project-name">{p.title}</span>
+                <span className="project-status">{p.status}</span>
+              </div>
+              <button 
+                className="project-delete-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Delete "${p.title}"? This cannot be undone.`)) {
+                    deleteProject(p.id);
+                  }
+                }}
+                title="Delete project"
+              >
+                ×
+              </button>
             </div>
           ))}
           <button 
@@ -156,39 +173,56 @@ export function Layout({ children }: LayoutProps) {
                     }
                   }}
                 >
-                  <span style={{ marginRight: '8px', cursor: 'grab', color: 'var(--text-muted)' }}>⋮⋮</span>
+                  <span className="chapter-drag-handle">⋮⋮</span>
                   <input
+                    className="chapter-title-input"
                     value={chapter.title}
                     onChange={(e) => updateChapter(chapter.id, { title: e.target.value })}
                     onClick={(e) => e.stopPropagation()}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      color: 'var(--text-primary)',
-                      width: '100px'
-                    }}
                   />
                   <span className="chapter-count">
                     {workspace.scenes.filter(s => s.chapterId === chapter.id).length}
                   </span>
+                  <button 
+                    className="chapter-delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete "${chapter.title}" and all its scenes?`)) {
+                        deleteChapter(chapter.id);
+                      }
+                    }}
+                    title="Delete chapter"
+                  >
+                    ×
+                  </button>
                 </div>
-                {workspace.scenes
-                  .filter(s => s.chapterId === chapter.id)
-                  .map((scene) => (
-                    <div
-                      key={scene.id}
-                      className={`scene-item ${scene.id === selectedSceneId ? "active" : ""}`}
-                      onClick={() => {
-                        selectScene(scene.id);
-                        setCurrentView("write");
-                      }}
-                    >
-                      <span className={`scene-status-dot ${scene.status}`} />
-                      <span className="scene-title">{scene.title}</span>
-                    </div>
-                  ))}
+                    {workspace.scenes
+                      .filter(s => s.chapterId === chapter.id)
+                      .map((scene) => (
+                        <div
+                          key={scene.id}
+                          className={`scene-item ${scene.id === selectedSceneId ? "active" : ""}`}
+                          onClick={() => {
+                            selectScene(scene.id);
+                            setCurrentView("write");
+                          }}
+                        >
+                          <span className={`scene-status-dot ${scene.status}`} />
+                          <span className="scene-title">{scene.title}</span>
+                          <button 
+                            className="scene-delete-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Delete "${scene.title}"?`)) {
+                                deleteScene(scene.id);
+                              }
+                            }}
+                            title="Delete scene"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
               </div>
             ))}
           </div>

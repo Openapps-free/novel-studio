@@ -267,32 +267,54 @@ export function WriteView() {
             </div>
           </div>
           
-          <div className="ai-modes-grid" style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '8px',
-            marginBottom: '16px'
-          }}>
-            {AI_MODES.map(mode => (
-              <button
-                key={mode.id}
-                onClick={() => setAiMode(mode.id as AIRequest["type"])}
-                className={`ai-mode-btn ${aiMode === mode.id ? "active" : ""}`}
-                style={{
-                  padding: '10px 12px',
-                  background: aiMode === mode.id ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
-                  border: `1px solid ${aiMode === mode.id ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'var(--transition-fast)'
-                }}
-              >
-                <div style={{ fontSize: '16px', marginBottom: '4px' }}>{mode.icon}</div>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: aiMode === mode.id ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{mode.label}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{mode.description}</div>
-              </button>
-            ))}
+          <div className="ai-modes-section">
+            <div className="ai-mode-category">
+              <span className="ai-category-label">✍️ Writing</span>
+              <div className="ai-modes-grid">
+                {AI_MODES.filter(m => m.category === "writing").map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setAiMode(mode.id as AIRequest["type"])}
+                    className={`ai-mode-btn ${aiMode === mode.id ? "active" : ""}`}
+                  >
+                    <span className="ai-mode-icon">{mode.icon}</span>
+                    <span className="ai-mode-label">{mode.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="ai-mode-category">
+              <span className="ai-category-label">🎭 Character</span>
+              <div className="ai-modes-grid">
+                {AI_MODES.filter(m => m.category === "creation").slice(0, 6).map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setAiMode(mode.id as AIRequest["type"])}
+                    className={`ai-mode-btn ${aiMode === mode.id ? "active" : ""}`}
+                  >
+                    <span className="ai-mode-icon">{mode.icon}</span>
+                    <span className="ai-mode-label">{mode.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="ai-mode-category">
+              <span className="ai-category-label">📋 Summary & Planning</span>
+              <div className="ai-modes-grid">
+                {AI_MODES.filter(m => m.category === "planning" || m.category === "summary" || m.category === "marketing").map(mode => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setAiMode(mode.id as AIRequest["type"])}
+                    className={`ai-mode-btn ${aiMode === mode.id ? "active" : ""}`}
+                  >
+                    <span className="ai-mode-icon">{mode.icon}</span>
+                    <span className="ai-mode-label">{mode.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           
           <button className="ai-submit-btn" onClick={handleAI} disabled={aiLoading}>

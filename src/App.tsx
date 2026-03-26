@@ -14,6 +14,7 @@ import { AnalyzeView } from "./views/Analyze";
 import { RevisionsView } from "./views/Revisions";
 import { ChatView } from "./views/Chat";
 import { SettingsView } from "./views/Settings";
+import { TemplatesView } from "./views/Templates";
 
 export default function App() {
   const { 
@@ -64,6 +65,8 @@ export default function App() {
         return <ChatView />;
       case "settings":
         return <SettingsView />;
+      case "templates":
+        return <TemplatesView />;
       default:
         return <OverviewView />;
     }

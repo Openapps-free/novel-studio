@@ -57,6 +57,42 @@ export async function saveWorkspace(workspace: Workspace): Promise<void> {
   }
 }
 
+export function exportWorkspaceToJSON(workspace: Workspace): string {
+  return JSON.stringify(workspace, null, 2);
+}
+
+export function downloadWorkspaceBackup(workspace: Workspace): void {
+  const timestamp = new Date().toISOString().split("T")[0];
+  const json = exportWorkspaceToJSON(workspace);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `novel-studio-backup-${timestamp}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+export function importWorkspaceFromJSON(jsonString: string): Workspace {
+  const parsed = JSON.parse(jsonString) as Workspace;
+  return {
+    ...DEFAULT_WORKSPACE,
+    ...parsed,
+    projects: parsed.projects || [],
+    chapters: parsed.chapters || [],
+    scenes: parsed.scenes || [],
+    codexEntries: parsed.codexEntries || [],
+    revisions: parsed.revisions || [],
+    folders: parsed.folders || [],
+    characterRelations: parsed.characterRelations || [],
+    timelineEvents: parsed.timelineEvents || [],
+    researchNotes: parsed.researchNotes || [],
+    tags: parsed.tags || [],
+  };
+}
+
 // Helper functions
 export function createProject(title: string, type: string = "Novel"): Project {
   const now = new Date().toISOString();

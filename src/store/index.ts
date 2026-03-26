@@ -52,6 +52,7 @@ interface AppState {
   
   // Initialize
   initializeWorkspace: () => Promise<void>;
+  setWorkspaceDirect: (workspace: Workspace) => void;
   save: () => Promise<void>;
   
   // Project actions
@@ -113,6 +114,9 @@ interface AppState {
   startWritingSession: (sceneId: string) => void;
   updateSessionWords: (words: number) => void;
   resetSession: () => void;
+  updateDailyWords: (words: number) => void;
+  toggleNanoWriMo: () => void;
+  setNanoTarget: (target: number) => void;
   
   // Computed getters
   getProject: () => ProjectWithRelations | null;
@@ -133,12 +137,17 @@ const DEFAULT_SETTINGS: AppSettings = {
   sessionGoal: 500,
   apiKey: "",
   apiProvider: "openai",
+  localModel: "llama3.1",
   fontSize: 18,
   fontFamily: "Georgia",
   lineHeight: 1.8,
   spellCheck: true,
   showWordCount: true,
   showCharacterCount: false,
+  nanoWriMoMode: false,
+  nanoWriMoTarget: 50000,
+  dailyWords: 0,
+  lastWritingDate: new Date().toISOString().split("T")[0],
 };
 
 const DEFAULT_SESSION: WritingSession = {
@@ -209,6 +218,25 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
+  // Set workspace directly (for restore)
+  setWorkspaceDirect: (workspace) => {
+    const savedSettings = localStorage.getItem("novel-studio-settings");
+    const settings = savedSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) } : DEFAULT_SETTINGS;
+    
+    set({ 
+      workspace: {
+        ...workspace,
+        researchNotes: workspace.researchNotes || [],
+        tags: workspace.tags || [],
+      }, 
+      settings,
+      selectedProjectId: workspace.projects[0]?.id || null,
+      selectedChapterId: null,
+      selectedSceneId: null,
+    });
+    get().save();
+  },
+
   // Project actions
   addProject: (title, type = "Novel") => {
     const project = createProject(title, type);
@@ -245,6 +273,28 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteProject: (id) => {
+    const remainingProjects = get().workspace.projects.filter((p) => p.id !== id);
+    const newSelectedId = get().selectedProjectId === id 
+      ? (remainingProjects[0]?.id || null)
+      : get().selectedProjectId;
+    
+    let newChapterId = get().selectedChapterId;
+    let newSceneId = get().selectedSceneId;
+    
+    if (get().selectedProjectId === id) {
+      if (remainingProjects.length > 0) {
+        const firstProjectChapters = get().workspace.chapters.filter((c) => c.projectId === remainingProjects[0].id);
+        newChapterId = firstProjectChapters[0]?.id || null;
+        if (newChapterId) {
+          const chapterScenes = get().workspace.scenes.filter((s) => s.chapterId === newChapterId);
+          newSceneId = chapterScenes[0]?.id || null;
+        }
+      } else {
+        newChapterId = null;
+        newSceneId = null;
+      }
+    }
+    
     set((state) => ({
       workspace: {
         ...state.workspace,
@@ -256,8 +306,14 @@ export const useStore = create<AppState>((set, get) => ({
         timelineEvents: state.workspace.timelineEvents.filter((e) => e.projectId !== id),
         researchNotes: state.workspace.researchNotes.filter((n) => n.projectId !== id),
         tags: state.workspace.tags.filter((t) => t.projectId !== id),
+        revisions: state.workspace.revisions.filter((r) => {
+          const scene = state.workspace.scenes.find(s => s.id === r.sceneId);
+          return !scene || scene.projectId !== id;
+        }),
       },
-      selectedProjectId: state.selectedProjectId === id ? null : state.selectedProjectId,
+      selectedProjectId: newSelectedId,
+      selectedChapterId: newChapterId,
+      selectedSceneId: newSceneId,
     }));
     get().save();
   },
@@ -310,6 +366,23 @@ export const useStore = create<AppState>((set, get) => ({
 
   deleteChapter: (id) => {
     const chapterScenes = get().workspace.scenes.filter((s) => s.chapterId === id);
+    const projectChapters = get().workspace.chapters.filter((c) => c.projectId === get().selectedProjectId);
+    const remainingChapters = projectChapters.filter((c) => c.id !== id);
+    
+    let newChapterId = get().selectedChapterId;
+    let newSceneId = get().selectedSceneId;
+    
+    if (get().selectedChapterId === id) {
+      if (remainingChapters.length > 0) {
+        newChapterId = remainingChapters[0].id;
+        const chapterScenes2 = get().workspace.scenes.filter((s) => s.chapterId === newChapterId);
+        newSceneId = chapterScenes2[0]?.id || null;
+      } else {
+        newChapterId = null;
+        newSceneId = null;
+      }
+    }
+    
     set((state) => ({
       workspace: {
         ...state.workspace,
@@ -319,7 +392,8 @@ export const useStore = create<AppState>((set, get) => ({
           (r) => !chapterScenes.some((s) => s.id === r.sceneId)
         ),
       },
-      selectedChapterId: state.selectedChapterId === id ? null : state.selectedChapterId,
+      selectedChapterId: newChapterId,
+      selectedSceneId: newSceneId,
     }));
     get().save();
   },
@@ -393,13 +467,23 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteScene: (id) => {
+    const currentChapterId = get().selectedChapterId;
+    const chapterScenes = get().workspace.scenes.filter((s) => s.chapterId === currentChapterId);
+    const remainingScenes = chapterScenes.filter((s) => s.id !== id);
+    
+    let newSceneId = get().selectedSceneId;
+    
+    if (get().selectedSceneId === id) {
+      newSceneId = remainingScenes[0]?.id || null;
+    }
+    
     set((state) => ({
       workspace: {
         ...state.workspace,
         scenes: state.workspace.scenes.filter((s) => s.id !== id),
         revisions: state.workspace.revisions.filter((r) => r.sceneId !== id),
       },
-      selectedSceneId: state.selectedSceneId === id ? null : state.selectedSceneId,
+      selectedSceneId: newSceneId,
     }));
     get().save();
   },
@@ -679,6 +763,35 @@ export const useStore = create<AppState>((set, get) => ({
 
   resetSession: () => {
     set({ writingSession: DEFAULT_SESSION });
+  },
+
+  updateDailyWords: (words: number) => {
+    const today = new Date().toISOString().split("T")[0];
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        dailyWords: words,
+        lastWritingDate: today,
+      },
+    }));
+  },
+
+  toggleNanoWriMo: () => {
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        nanoWriMoMode: !state.settings.nanoWriMoMode,
+      },
+    }));
+  },
+
+  setNanoTarget: (target: number) => {
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        nanoWriMoTarget: target,
+      },
+    }));
   },
 
   // Computed getters

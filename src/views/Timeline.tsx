@@ -14,6 +14,7 @@ export function TimelineView() {
   const events = getTimelineEvents();
   
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [newDate, setNewDate] = useState("");
 
@@ -30,6 +31,16 @@ export function TimelineView() {
     }
   };
 
+  const groupedByYear = useMemo(() => {
+    const groups: Record<string, typeof events> = {};
+    for (const event of sortedEvents) {
+      const year = new Date(event.date).getFullYear().toString();
+      if (!groups[year]) groups[year] = [];
+      groups[year].push(event);
+    }
+    return groups;
+  }, [sortedEvents]);
+
   if (!project) {
     return (
       <div className="view timeline-view">
@@ -44,106 +55,118 @@ export function TimelineView() {
   return (
     <div className="view timeline-view">
       <div className="timeline-header">
-        <h2>Story Timeline</h2>
+        <div>
+          <h2>Story Timeline</h2>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '8px' }}>
+            Track the chronology of your story events
+          </p>
+        </div>
         <button className="btn btn-primary" onClick={() => setShowAdd(!showAdd)}>
           + Add Event
         </button>
       </div>
 
       {showAdd && (
-        <div className="add-event-form" style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: 'var(--radius-lg)', marginBottom: '24px', border: '1px solid var(--border-subtle)' }}>
+        <div className="timeline-add-form">
           <input
+            className="timeline-input"
             placeholder="Event title"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', padding: '12px', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', width: '100%', marginBottom: '12px' }}
           />
           <input
             type="date"
+            className="timeline-input"
             value={newDate}
             onChange={(e) => setNewDate(e.target.value)}
-            style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-subtle)', padding: '12px', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)', marginBottom: '12px' }}
           />
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div className="timeline-form-actions">
             <button className="btn btn-primary" onClick={handleAdd}>Add Event</button>
             <button className="btn btn-secondary" onClick={() => setShowAdd(false)}>Cancel</button>
           </div>
         </div>
       )}
 
-      <div className="timeline-list">
-        {sortedEvents.length === 0 ? (
-          <div className="empty-state">
-            <h3>No Timeline Events</h3>
-            <p>Add events to track your story's chronology</p>
-          </div>
-        ) : (
-          sortedEvents.map((event) => (
-            <div key={event.id} className="timeline-event-card" style={{ 
-              background: 'var(--bg-secondary)', 
-              padding: '20px', 
-              borderRadius: 'var(--radius-lg)', 
-              marginBottom: '16px',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '20px'
-            }}>
-              <div className="timeline-event-date" style={{ 
-                background: 'var(--accent-subtle)', 
-                padding: '12px 16px', 
-                borderRadius: 'var(--radius-md)',
-                minWidth: '120px',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>
-                  {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </div>
+      {sortedEvents.length === 0 ? (
+        <div className="timeline-empty">
+          <div className="timeline-empty-icon">📅</div>
+          <h3>No Timeline Events</h3>
+          <p>Add events to track your story's chronology</p>
+          <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+            + Add First Event
+          </button>
+        </div>
+      ) : (
+        <div className="timeline-container">
+          {Object.entries(groupedByYear).map(([year, yearEvents]) => (
+            <div key={year} className="timeline-year">
+              <div className="timeline-year-header">
+                <span className="timeline-year-badge">{year}</span>
+                <span className="timeline-year-count">{yearEvents.length} events</span>
               </div>
-              <div className="timeline-event-content" style={{ flex: 1 }}>
-                <input
-                  value={event.title}
-                  onChange={(e) => updateTimelineEvent(event.id, { title: e.target.value })}
-                  style={{ 
-                    background: 'transparent', 
-                    border: 'none', 
-                    fontSize: '18px', 
-                    fontWeight: '600', 
-                    color: 'var(--text-primary)',
-                    width: '100%',
-                    marginBottom: '8px'
-                  }}
-                />
-                <textarea
-                  value={event.description}
-                  onChange={(e) => updateTimelineEvent(event.id, { description: e.target.value })}
-                  placeholder="Event description..."
-                  style={{ 
-                    background: 'var(--bg-primary)', 
-                    border: '1px solid var(--border-subtle)', 
-                    padding: '12px', 
-                    borderRadius: 'var(--radius-md)', 
-                    color: 'var(--text-primary)',
-                    width: '100%',
-                    minHeight: '80px',
-                    resize: 'vertical'
-                  }}
-                />
+              
+              <div className="timeline-line">
+                {yearEvents.map((event, index) => (
+                  <div 
+                    key={event.id} 
+                    className={`timeline-event ${editingId === event.id ? 'editing' : ''}`}
+                    onClick={() => setEditingId(editingId === event.id ? null : event.id)}
+                  >
+                    <div className="timeline-dot-container">
+                      <div className="timeline-dot" />
+                      {index < yearEvents.length - 1 && <div className="timeline-dot-line" />}
+                    </div>
+                    
+                    <div className="timeline-event-card">
+                      <div className="timeline-event-date">
+                        {new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                      
+                      <div className="timeline-event-content">
+                        {editingId === event.id ? (
+                          <div className="timeline-edit-form">
+                            <input
+                              className="timeline-input"
+                              value={event.title}
+                              onChange={(e) => updateTimelineEvent(event.id, { title: e.target.value })}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <textarea
+                              className="timeline-textarea"
+                              value={event.description}
+                              onChange={(e) => updateTimelineEvent(event.id, { description: e.target.value })}
+                              placeholder="Event description..."
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <button 
+                              className="timeline-delete-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Delete this event?")) {
+                                  deleteTimelineEvent(event.id);
+                                }
+                              }}
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <h4 className="timeline-event-title">{event.title}</h4>
+                            {event.description && (
+                              <p className="timeline-event-desc">{event.description}</p>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <button 
-                className="delete-btn"
-                onClick={() => {
-                  if (confirm("Delete this event?")) {
-                    deleteTimelineEvent(event.id);
-                  }
-                }}
-              >
-                🗑️
-              </button>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

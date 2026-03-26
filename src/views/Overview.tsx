@@ -1,5 +1,6 @@
 import { useStore } from "../store";
 import { calculateWordCount } from "../services/storage";
+import { WritingGoalsPanel } from "../components/WritingGoalsPanel";
 
 export function OverviewView() {
   const { getProject, getProjectStats, updateProject, setCurrentView } = useStore();
@@ -92,56 +93,62 @@ export function OverviewView() {
         </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span className="stat-icon">📝</span>
-          <span className="stat-number">{stats?.sceneCount ?? 0}</span>
-          <span className="stat-name">Scenes</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-icon">✅</span>
-          <span className="stat-number">{stats?.completedScenes ?? 0}</span>
-          <span className="stat-name">Completed</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-icon">👥</span>
-          <span className="stat-number">{stats?.characters ?? 0}</span>
-          <span className="stat-name">Characters</span>
-        </div>
-        <div className="stat-card">
-          <span className="stat-icon">📍</span>
-          <span className="stat-number">{stats?.locations ?? 0}</span>
-          <span className="stat-name">Locations</span>
-        </div>
-      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px' }}>
+        <div>
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-icon">📝</span>
+              <span className="stat-number">{stats?.sceneCount ?? 0}</span>
+              <span className="stat-name">Scenes</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-icon">✅</span>
+              <span className="stat-number">{stats?.completedScenes ?? 0}</span>
+              <span className="stat-name">Completed</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-icon">👥</span>
+              <span className="stat-number">{stats?.characters ?? 0}</span>
+              <span className="stat-name">Characters</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-icon">📍</span>
+              <span className="stat-number">{stats?.locations ?? 0}</span>
+              <span className="stat-name">Locations</span>
+            </div>
+          </div>
 
-      <div className="chapters-overview">
-        <h3>Chapters</h3>
-        <div className="chapter-cards">
-          {project.chapters.map((chapter, idx) => {
-            const words = project.scenes
-              .filter(s => s.chapterId === chapter.id)
-              .reduce((sum, s) => sum + calculateWordCount(s.content), 0);
-            const percent = stats?.wordCount ? (words / stats.wordCount) * 100 : 0;
-            return (
-              <div key={chapter.id} className="chapter-card" onClick={() => setCurrentView("write")}>
-                <span className="chapter-num">{idx + 1}</span>
-                <div className="chapter-info">
-                  <span className="chapter-name">{chapter.title}</span>
-                  <span className="chapter-meta">
-                    {project.scenes.filter(s => s.chapterId === chapter.id).length} scenes · {words.toLocaleString()} words
-                  </span>
-                </div>
-                <div className="chapter-progress">
-                  <div className="chapter-bar">
-                    <div className="chapter-bar-fill" style={{ width: `${percent}%` }} />
+          <div className="chapters-overview">
+            <h3>Chapters</h3>
+            <div className="chapter-cards">
+              {project.chapters.map((chapter, idx) => {
+                const words = project.scenes
+                  .filter(s => s.chapterId === chapter.id)
+                  .reduce((sum, s) => sum + calculateWordCount(s.content), 0);
+                const percent = stats?.wordCount ? (words / stats.wordCount) * 100 : 0;
+                return (
+                  <div key={chapter.id} className="chapter-card" onClick={() => setCurrentView("write")}>
+                    <span className="chapter-num">{idx + 1}</span>
+                    <div className="chapter-info">
+                      <span className="chapter-name">{chapter.title}</span>
+                      <span className="chapter-meta">
+                        {project.scenes.filter(s => s.chapterId === chapter.id).length} scenes · {words.toLocaleString()} words
+                      </span>
+                    </div>
+                    <div className="chapter-progress">
+                      <div className="chapter-bar">
+                        <div className="chapter-bar-fill" style={{ width: `${percent}%` }} />
+                      </div>
+                      <span className="chapter-progress-text">{Math.round(percent)}%</span>
+                    </div>
                   </div>
-                  <span className="chapter-progress-text">{Math.round(percent)}%</span>
-                </div>
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          </div>
         </div>
+        
+        <WritingGoalsPanel />
       </div>
     </div>
   );
