@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useStore } from "../store";
 import { callAI } from "../services/ai";
 import { AIRequest, AIRequestType } from "../types";
@@ -10,23 +10,53 @@ interface ChatMessage {
   timestamp: string;
 }
 
+const STORAGE_KEY = "novel-studio-chat-messages";
+
+function loadMessages(): ChatMessage[] {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(messages: ChatMessage[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-100)));
+  } catch {
+    // Storage full or unavailable
+  }
+}
+
 export function ChatView() {
   const { getProject, settings } = useStore();
   const project = getProject();
   
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMode, setSelectedMode] = useState<AIRequestType>("brainstorm");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    saveMessages(messages);
   }, [messages]);
+
+  const handleClearChat = () => {
+    if (confirm("Clear all chat messages?")) {
+      setMessages([]);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -103,12 +133,15 @@ export function ChatView() {
     );
   }
 
-  if (!settings.apiKey) {
+  const isLocalProvider = settings.apiProvider === "ollama" || settings.apiProvider === "lmstudio";
+  const hasConfig = isLocalProvider || (settings.apiKey && settings.apiKey.length > 0);
+
+  if (!hasConfig) {
     return (
       <div className="view chat-view">
         <div className="empty-state">
-          <h2>API Key Required</h2>
-          <p>Please configure your API key in Settings to use the AI Chat</p>
+          <h2>AI Not Configured</h2>
+          <p>Please configure your API key or local AI provider in Settings to use the AI Chat</p>
         </div>
       </div>
     );
@@ -117,7 +150,17 @@ export function ChatView() {
   return (
     <div className="view chat-view" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div className="chat-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-        <h2>AI Chat</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <h2>AI Chat</h2>
+          {messages.length > 0 && (
+            <button 
+              onClick={handleClearChat}
+              style={{ background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)", padding: "6px 12px", borderRadius: "var(--radius-md)", color: "var(--text-secondary)", cursor: "pointer", fontSize: "12px" }}
+            >
+              Clear Chat
+            </button>
+          )}
+        </div>
         <select
           value={selectedMode}
           onChange={(e) => setSelectedMode(e.target.value as AIRequestType)}

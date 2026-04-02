@@ -1,5 +1,28 @@
 import { WritingTemplate } from "../types";
-import { v4 as uuidv4 } from "uuid";
+
+export interface WritingBeat {
+  name: string;
+  description: string;
+  prompt: string;
+  intensity: number; // 0-10 scale for tension mapping
+}
+
+/**
+ * Configuration for template scaling and structural analysis.
+ */
+const CONFIG = {
+  DEFAULT_CHAPTERS_PER_BEAT: 1.5,
+  AVG_WORDS_PER_CHAPTER: 2500,
+  COMPLEXITY_THRESHOLDS: {
+    HIGH: 10,
+    MEDIUM: 6,
+  },
+  GENRE_PACING: {
+    Thriller: 1.2, // Faster pacing, more beats per chapter
+    Romance: 1.8,  // Slower pacing, more focus per beat
+    Fantasy: 2.0,  // Deep world building
+  } as Record<string, number>
+} as const;
 
 export const GENRE_TEMPLATES: WritingTemplate[] = [
   {
@@ -8,18 +31,18 @@ export const GENRE_TEMPLATES: WritingTemplate[] = [
     description: "Classic fantasy adventure following the monomyth structure",
     category: "Fantasy",
     beats: [
-      { name: "Ordinary World", description: "The hero's normal life before the adventure", prompt: "Describe the hero's ordinary world - their home, family, and daily life. What makes this world feel lived-in?" },
-      { name: "Call to Adventure", description: "The hero receives a challenge or quest", prompt: "What event or person summons the hero to adventure? Why can't they refuse?" },
-      { name: "Refusal of the Call", description: "Hero initially hesitates or refuses", prompt: "What fears or obligations cause the hero to hesitate? What ultimately pushes them forward?" },
-      { name: "Meeting the Mentor", description: "Hero gains guidance or supernatural aid", prompt: "Who or what guides the hero? What power or knowledge do they provide?" },
-      { name: "Crossing the Threshold", description: "Hero commits to the adventure", prompt: "The hero leaves their ordinary world. Describe the moment of commitment and the new world they enter." },
-      { name: "Tests, Allies, Enemies", description: "Hero faces challenges and meets characters", prompt: "What obstacles does the hero face? Who becomes their allies? Who are their enemies?" },
-      { name: "Approach to Inmost Cave", description: "Hero prepares for major challenge", prompt: "The hero gathers their resources and prepares to face their greatest fear. What is their plan?" },
-      { name: "Ordeal", description: "Hero faces greatest fear/death/rebirth", prompt: "Describe the hero's darkest moment. What do they lose, and what do they gain?" },
-      { name: "Reward", description: "Hero takes possession of the treasure", prompt: "What has the hero gained? How has this changed them?" },
-      { name: "The Road Back", description: "Hero begins the return journey", prompt: "The hero begins the journey home, but new complications arise." },
-      { name: "Resurrection", description: "Final test and transformation", prompt: "The hero faces a final test that transforms them. How do they prove their changed nature?" },
-      { name: "Return with Elixir", description: "Hero returns changed, bringing healing", prompt: "How does the hero return to their ordinary world? What healing or change do they bring?" }
+      { name: "Ordinary World", intensity: 1, description: "The hero's normal life before the adventure", prompt: "Describe the hero's ordinary world - their home, family, and daily life. What makes this world feel lived-in?" },
+      { name: "Call to Adventure", intensity: 3, description: "The hero receives a challenge or quest", prompt: "What event or person summons the hero to adventure? Why can't they refuse?" },
+      { name: "Refusal of the Call", intensity: 2, description: "Hero initially hesitates or refuses", prompt: "What fears or obligations cause the hero to hesitate? What ultimately pushes them forward?" },
+      { name: "Meeting the Mentor", intensity: 2, description: "Hero gains guidance or supernatural aid", prompt: "Who or what guides the hero? What power or knowledge do they provide?" },
+      { name: "Crossing the Threshold", intensity: 5, description: "Hero commits to the adventure", prompt: "The hero leaves their ordinary world. Describe the moment of commitment and the new world they enter." },
+      { name: "Tests, Allies, Enemies", intensity: 4, description: "Hero faces challenges and meets characters", prompt: "What obstacles does the hero face? Who becomes their allies? Who are their enemies?" },
+      { name: "Approach to Inmost Cave", intensity: 6, description: "Hero prepares for major challenge", prompt: "The hero gathers their resources and prepares to face their greatest fear. What is their plan?" },
+      { name: "Ordeal", intensity: 9, description: "Hero faces greatest fear/death/rebirth", prompt: "Describe the hero's darkest moment. What do they lose, and what do they gain?" },
+      { name: "Reward", intensity: 3, description: "Hero takes possession of the treasure", prompt: "What has the hero gained? How has this changed them?" },
+      { name: "The Road Back", intensity: 7, description: "Hero begins the journey home, but new complications arise.", prompt: "New complications arise on the return journey." },
+      { name: "Resurrection", intensity: 10, description: "Final test and transformation", prompt: "The hero faces a final test that transforms them. How do they prove their changed nature?" },
+      { name: "Return with Elixir", intensity: 2, description: "Hero returns changed, bringing healing", prompt: "How does the hero return to their ordinary world? What healing or change do they bring?" }
     ]
   },
   {
@@ -126,43 +149,98 @@ export const GENRE_TEMPLATES: WritingTemplate[] = [
   }
 ];
 
+/**
+ * Interface for template statistics to help writers plan their project scale.
+ */
+export interface TemplateStats {
+  beatCount: number;
+  category: string;
+  estimatedChapters: number;
+  estimatedWordCount: number;
+  structuralComplexity: 'Low' | 'Medium' | 'High';
+  thematicTags: string[];
+}
+
+/**
+ * Internal caches for O(1) lookup performance.
+ */
+const TEMPLATE_MAP = new Map(GENRE_TEMPLATES.map(t => [t.id, t]));
+
+const CATEGORY_MAP = GENRE_TEMPLATES.reduce((acc, template) => {
+  const cat = template.category.toLowerCase();
+  if (!acc.has(cat)) acc.set(cat, []);
+  acc.get(cat)!.push(template);
+  return acc;
+}, new Map<string, WritingTemplate[]>());
+
+const UNIQUE_CATEGORIES = Array.from(new Set(GENRE_TEMPLATES.map(t => t.category))).sort();
+
+/**
+ * Returns all templates for a specific category.
+ * Optimized with O(1) map lookup.
+ */
 export function getTemplatesByCategory(category: string): WritingTemplate[] {
-  return GENRE_TEMPLATES.filter(t => t.category === category);
+  return CATEGORY_MAP.get(category.toLowerCase()) || [];
 }
 
+/**
+ * Retrieves a template by its unique ID.
+ * Optimized with O(1) map lookup.
+ */
+export function getTemplateById(id: string): WritingTemplate | undefined {
+  return TEMPLATE_MAP.get(id);
+}
+
+/**
+ * Returns a unique, sorted list of genre categories.
+ */
 export function getCategories(): string[] {
-  return [...new Set(GENRE_TEMPLATES.map(t => t.category))];
+  return [...UNIQUE_CATEGORIES];
 }
 
-export function createTemplateFromGenre(genreId: string): WritingTemplate | undefined {
-  const template = GENRE_TEMPLATES.find(t => t.id === genreId);
+/**
+ * Search templates by name, category, or description.
+ */
+export function searchTemplates(query: string): WritingTemplate[] {
+  const normalizedQuery = query.toLowerCase().trim();
+  if (!normalizedQuery) return GENRE_TEMPLATES;
+
+  return GENRE_TEMPLATES
+    .map(template => {
+      let score = 0;
+      if (template.name.toLowerCase().includes(normalizedQuery)) score += 10;
+      if (template.category.toLowerCase() === normalizedQuery) score += 5;
+      if (template.description.toLowerCase().includes(normalizedQuery)) score += 2;
+      return { template, score };
+    })
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map(item => item.template);
+}
+
+/**
+ * Provides structural analysis of a template.
+ */
+export function getTemplateStats(templateId: string): TemplateStats | undefined {
+  const template = getTemplateById(templateId);
   if (!template) return undefined;
-  
-  return {
-    ...template,
-    id: uuidv4(),
-    name: `${template.name} - Copy`,
-    beats: template.beats.map(beat => ({ ...beat }))
-  };
-}
 
-export function generateTemplateScene(
-  template: WritingTemplate,
-  beatIndex: number,
-  projectTitle: string,
-  characters: string[]
-): string {
-  const beat = template.beats[beatIndex];
-  if (!beat) return "";
+  const beatCount = template.beats.length;
+  const { HIGH, MEDIUM } = CONFIG.COMPLEXITY_THRESHOLDS;
   
-  let prompt = `# ${beat.name}\n\n`;
-  prompt += `*${beat.description}*\n\n`;
-  prompt += `## Writing Prompt\n${beat.prompt}\n\n`;
-  prompt += `---\n\n`;
-  prompt += `**Genre:** ${template.category}\n`;
-  prompt += `**Template:** ${template.name}\n`;
-  if (projectTitle) prompt += `\n**Project:** ${projectTitle}`;
-  if (characters.length > 0) prompt += `\n**Characters:** ${characters.join(", ")}`;
-  
-  return prompt;
+  const pacingMultiplier = CONFIG.GENRE_PACING[template.category] || CONFIG.DEFAULT_CHAPTERS_PER_BEAT;
+  const estimatedChapters = Math.ceil(beatCount * pacingMultiplier);
+
+  let structuralComplexity: TemplateStats['structuralComplexity'] = 'Low';
+  if (beatCount > HIGH) structuralComplexity = 'High';
+  else if (beatCount > MEDIUM) structuralComplexity = 'Medium';
+
+  return {
+    beatCount,
+    category: template.category,
+    estimatedChapters,
+    estimatedWordCount: estimatedChapters * CONFIG.AVG_WORDS_PER_CHAPTER,
+    structuralComplexity,
+    thematicTags: template.beats.map(beat => beat.name).slice(0, 5)
+  };
 }

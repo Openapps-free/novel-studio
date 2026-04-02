@@ -10,7 +10,7 @@ export type SceneStatus = "outline" | "draft" | "revising" | "complete";
 export type CodexType = "character" | "location" | "item" | "lore" | "event";
 
 // Theme
-export type Theme = "dark" | "light" | "sepia";
+export type Theme = "dark" | "light" | "sepia" | "midnight" | "zen" | "royal" | "oled";
 
 // API Provider
 export type AIProvider = "openai" | "anthropic" | "ollama" | "lmstudio";
@@ -142,6 +142,7 @@ export interface TimelineEvent {
   relatedCharacters: string[];
   relatedLocations: string[];
   createdAt: string;
+  updatedAt: string;
 }
 
 // Revision/Version History
@@ -166,7 +167,8 @@ export interface Project {
   storyThreads: string[];
   genre: string;
   tone: string;
-  POV: string;
+  pov: string;
+  lastOpened: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -190,6 +192,7 @@ export interface AppSettings {
   apiKey: string;
   apiProvider: AIProvider;
   localModel: string;
+  cloudModel: string;
   fontSize: number;
   fontFamily: string;
   lineHeight: number;
@@ -246,6 +249,7 @@ export interface AIModelConfig {
 export interface AIRequest {
   type: AIRequestType;
   prompt: string;
+  maxTokens?: number;
   context?: {
     sceneContent?: string;
     characterBio?: string;
@@ -283,6 +287,8 @@ export interface Tag {
   name: string;
   color: string;
   description: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Writing Template
@@ -295,6 +301,7 @@ export interface WritingTemplate {
     name: string;
     description: string;
     prompt: string;
+    intensity?: number;
   }[];
 }
 

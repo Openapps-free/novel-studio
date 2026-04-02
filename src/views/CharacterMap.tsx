@@ -33,20 +33,31 @@ export function CharacterMapView() {
   const characters = project?.codexEntries.filter(e => e.type === "character") || [];
   
   const svgRef = useRef<SVGSVGElement>(null);
+  const [svgSize, setSvgSize] = useState({ width: 800, height: 600 });
   const [nodes, setNodes] = useState<CharacterNode[]>([]);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [selectedRelation, setSelectedRelation] = useState<CharacterRelation | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [showAddRelation, setShowAddRelation] = useState(false);
   const [newRelation, setNewRelation] = useState({ fromId: "", toId: "", relationType: "friend" });
 
-  // Initialize nodes from characters
+  useEffect(() => {
+    const updateSize = () => {
+      if (svgRef.current) {
+        const rect = svgRef.current.getBoundingClientRect();
+        setSvgSize({ width: rect.width, height: 600 });
+      }
+    };
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
   useEffect(() => {
     if (characters.length > 0 && nodes.length === 0) {
-      const centerX = 400;
-      const centerY = 300;
-      const radius = 200;
+      const centerX = svgSize.width / 2;
+      const centerY = svgSize.height / 2;
+      const radius = Math.min(svgSize.width, svgSize.height) * 0.3;
       
       const newNodes = characters.map((char, i) => {
         const angle = (2 * Math.PI * i) / characters.length - Math.PI / 2;
@@ -59,13 +70,12 @@ export function CharacterMapView() {
       });
       setNodes(newNodes);
     }
-  }, [characters]);
+  }, [characters, svgSize]);
 
-  const handleMouseDown = (e: React.MouseEvent, nodeId: string) => {
+  const handleMouseDown = (_e: React.MouseEvent, nodeId: string) => {
     const node = nodes.find(n => n.id === nodeId);
     if (node) {
       setDragging(nodeId);
-      setDragOffset({ x: e.clientX - node.x, y: e.clientY - node.y });
       setSelectedNode(nodeId);
     }
   };
@@ -78,7 +88,7 @@ export function CharacterMapView() {
       const y = e.clientY - rect.top;
       
       setNodes(prev => prev.map(n => 
-        n.id === dragging ? { ...n, x: x - dragOffset.x + 50, y: y - dragOffset.y + 50 } : n
+        n.id === dragging ? { ...n, x: x, y: y } : n
       ));
     }
   };

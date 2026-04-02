@@ -4,6 +4,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Typography from "@tiptap/extension-typography";
 import Highlight from "@tiptap/extension-highlight";
 import { useEffect, useMemo } from "react";
+import { studioEngine } from "../CoreEngine";
 
 interface RichTextEditorProps {
   content: string;
@@ -193,6 +194,20 @@ export default function RichTextEditor({
       attributes: {
         class: "prose-input",
       },
+      handlePaste: (view, event, _slice) => {
+        const clipboardData = event.clipboardData;
+        if (clipboardData) {
+          const text = clipboardData.getData('text/plain');
+          if (text) {
+            const smartText = studioEngine.applySmartTypography(text);
+            const { tr } = view.state;
+            tr.insertText(smartText);
+            view.dispatch(tr);
+            return true;
+          }
+        }
+        return false;
+      },
     },
   });
 
@@ -223,11 +238,13 @@ export default function RichTextEditor({
 
       const rect = editorEl.getBoundingClientRect();
       const cursorY = window.scrollY + rect.top + rect.height / 2;
-      const windowCenter = window.scrollY + window.innerHeight / 2;
-
-      if (Math.abs(cursorY - windowCenter) > 50) {
-        const scrollAmount = cursorY - windowCenter;
-        window.scrollBy({ top: scrollAmount * 0.5, behavior: "smooth" });
+      const containerHeight = window.innerHeight;
+      const lineTop = cursorY - window.scrollY;
+      
+      const targetScroll = studioEngine.calculateFocusScroll(lineTop, containerHeight);
+      const currentScroll = window.scrollY;
+      if (Math.abs(targetScroll - currentScroll) > 10) {
+        window.scrollTo({ top: targetScroll, behavior: "smooth" });
       }
     };
 

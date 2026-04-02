@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { useStore } from "../store";
 import { ViewType } from "../types";
 import { Logo } from "./Logo";
+import { showConfirm } from "./ConfirmModal";
 
 interface LayoutProps {
   children: ReactNode;
@@ -55,10 +56,11 @@ export function Layout({ children }: LayoutProps) {
   const chapters = workspace.chapters.filter(c => c.projectId === selectedProjectId);
 
   const cycleTheme = () => {
-    const themes: Array<"dark" | "light" | "sepia"> = ["dark", "light", "sepia"];
+    const themes: Array<"dark" | "light" | "sepia" | "midnight" | "zen" | "royal" | "oled"> = ["dark", "light", "sepia", "midnight", "zen", "royal", "oled"];
     const currentIndex = themes.indexOf(settings.theme);
     const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
+    const nextTheme = themes[nextIndex];
+    if (nextTheme) setTheme(nextTheme);
   };
 
   return (
@@ -99,11 +101,10 @@ export function Layout({ children }: LayoutProps) {
               </div>
               <button 
                 className="project-delete-btn"
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  if (confirm(`Delete "${p.title}"? This cannot be undone.`)) {
-                    deleteProject(p.id);
-                  }
+                  const confirmed = await showConfirm("Delete Project", `Delete "${p.title}"? This cannot be undone.`, { variant: "danger", confirmLabel: "Delete" });
+                  if (confirmed) deleteProject(p.id);
                 }}
                 title="Delete project"
               >
@@ -148,7 +149,7 @@ export function Layout({ children }: LayoutProps) {
                     const fromIdx = newOrder.findIndex(c => c.id === draggingChapter);
                     const toIdx = newOrder.findIndex(c => c.id === chapter.id);
                     const [removed] = newOrder.splice(fromIdx, 1);
-                    newOrder.splice(toIdx, 0, removed);
+                    if (removed) newOrder.splice(toIdx, 0, removed);
                     reorderChapters(newOrder.map(c => c.id));
                   }
                   setDraggingChapter(null);
@@ -169,7 +170,8 @@ export function Layout({ children }: LayoutProps) {
                     selectChapter(chapter.id);
                     const scenes = workspace.scenes.filter(s => s.chapterId === chapter.id);
                     if (scenes.length > 0) {
-                      selectScene(scenes[0].id);
+                      const firstScene = scenes[0];
+                      if (firstScene) selectScene(firstScene.id);
                     }
                   }}
                 >
@@ -185,11 +187,10 @@ export function Layout({ children }: LayoutProps) {
                   </span>
                   <button 
                     className="chapter-delete-btn"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      if (confirm(`Delete "${chapter.title}" and all its scenes?`)) {
-                        deleteChapter(chapter.id);
-                      }
+                      const confirmed = await showConfirm("Delete Chapter", `Delete "${chapter.title}" and all its scenes?`, { variant: "danger", confirmLabel: "Delete" });
+                      if (confirmed) deleteChapter(chapter.id);
                     }}
                     title="Delete chapter"
                   >
@@ -211,11 +212,10 @@ export function Layout({ children }: LayoutProps) {
                           <span className="scene-title">{scene.title}</span>
                           <button 
                             className="scene-delete-btn"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              if (confirm(`Delete "${scene.title}"?`)) {
-                                deleteScene(scene.id);
-                              }
+                              const confirmed = await showConfirm("Delete Scene", `Delete "${scene.title}"?`, { variant: "danger", confirmLabel: "Delete" });
+                              if (confirmed) deleteScene(scene.id);
                             }}
                             title="Delete scene"
                           >

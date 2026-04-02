@@ -200,7 +200,7 @@ export function AnalyzeView() {
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "var(--text-secondary)" }}>Sentiment</span>
-                    <span style={{ fontWeight: "600", textTransform: "capitalize", color: sceneAnalysis.sentiment === "positive" ? "#22c55e" : sceneAnalysis.sentiment === "negative" ? "#f43f5e" : "inherit" }}>{sceneAnalysis.sentiment}</span>
+                    <span style={{ fontWeight: "600", textTransform: "capitalize", color: sceneAnalysis.sentimentScore > 0 ? "#22c55e" : sceneAnalysis.sentimentScore < 0 ? "#f43f5e" : "inherit" }}>{sceneAnalysis.sentimentScore > 0 ? "Positive" : sceneAnalysis.sentimentScore < 0 ? "Negative" : "Neutral"}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "var(--text-secondary)" }}>Tense</span>

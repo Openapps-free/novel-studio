@@ -61,7 +61,7 @@ export function PlanView() {
     
     const newOrder = [...chapterScenes];
     const [removed] = newOrder.splice(draggedIndex, 1);
-    newOrder.splice(targetIndex, 0, removed);
+    if (removed) newOrder.splice(targetIndex, 0, removed);
     
     reorderScenes(currentChapter!.id, newOrder.map(s => s.id));
     setDraggedScene(null);

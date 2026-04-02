@@ -9,6 +9,10 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -16,9 +20,12 @@
 
     /* Linting */
     "strict": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

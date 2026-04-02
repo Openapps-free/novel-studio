@@ -9,6 +9,7 @@ import {
   CharacterRelation,
   TimelineEvent,
   ProjectWithRelations,
+  AppSettings,
   CodexType,
   ResearchNote,
   Tag,
@@ -27,6 +28,13 @@ const DEFAULT_WORKSPACE: Workspace = {
   researchNotes: [],
   tags: [],
 };
+
+/**
+ * Utility to get current timestamp once per operation to ensure consistency.
+ */
+function getTimestamp(): string {
+  return new Date().toISOString();
+}
 
 export async function loadWorkspace(): Promise<Workspace> {
   try {
@@ -53,6 +61,27 @@ export async function saveWorkspace(workspace: Workspace): Promise<void> {
     await invoke("save_workspace_snapshot", { workspaceJson: JSON.stringify(workspace) });
   } catch (error) {
     console.error("Failed to save workspace:", error);
+    throw error;
+  }
+}
+
+export async function loadSettings(): Promise<AppSettings | null> {
+  try {
+    const data = await invoke<string | null>("load_settings");
+    if (data) {
+      return JSON.parse(data) as AppSettings;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveSettings(settings: AppSettings): Promise<void> {
+  try {
+    await invoke("save_settings", { settingsJson: JSON.stringify(settings) });
+  } catch (error) {
+    console.error("Failed to save settings:", error);
     throw error;
   }
 }
@@ -95,7 +124,7 @@ export function importWorkspaceFromJSON(jsonString: string): Workspace {
 
 // Helper functions
 export function createProject(title: string, type: string = "Novel"): Project {
-  const now = new Date().toISOString();
+  const now = getTimestamp();
   return {
     id: uuidv4(),
     title,
@@ -107,14 +136,15 @@ export function createProject(title: string, type: string = "Novel"): Project {
     storyThreads: [],
     genre: "",
     tone: "",
-    POV: "",
+    pov: "",
+    lastOpened: now, // New: for "Recent Projects" UI
     createdAt: now,
     updatedAt: now,
   };
 }
 
 export function createChapter(projectId: string, title: string, order: number): Chapter {
-  const now = new Date().toISOString();
+  const now = getTimestamp();
   return {
     id: uuidv4(),
     projectId,
@@ -128,11 +158,11 @@ export function createChapter(projectId: string, title: string, order: number): 
   };
 }
 
-export function createScene(chapterId: string, title: string, order: number): Scene {
-  const now = new Date().toISOString();
+export function createScene(chapterId: string, title: string, order: number, projectId: string = ""): Scene {
+  const now = getTimestamp();
   return {
     id: uuidv4(),
-    projectId: "",
+    projectId,
     chapterId,
     title,
     summary: "",
@@ -153,7 +183,7 @@ export function createScene(chapterId: string, title: string, order: number): Sc
 }
 
 export function createCodexEntry(projectId: string, type: CodexType, title: string): CodexEntry {
-  const now = new Date().toISOString();
+  const now = getTimestamp();
   return {
     id: uuidv4(),
     projectId,
@@ -169,7 +199,7 @@ export function createCodexEntry(projectId: string, type: CodexType, title: stri
 }
 
 export function createRevision(sceneId: string, content: string): Revision {
-  const now = new Date().toISOString();
+  const now = getTimestamp();
   return {
     id: uuidv4(),
     sceneId,
@@ -197,7 +227,7 @@ export function createCharacterRelation(
 }
 
 export function createTimelineEvent(projectId: string, title: string, date: string, order: number): TimelineEvent {
-  const now = new Date().toISOString();
+  const now = getTimestamp();
   return {
     id: uuidv4(),
     projectId,
@@ -209,11 +239,12 @@ export function createTimelineEvent(projectId: string, title: string, date: stri
     relatedCharacters: [],
     relatedLocations: [],
     createdAt: now,
+    updatedAt: now,
   };
 }
 
 export function createResearchNote(projectId: string, title: string, category: string = "General"): ResearchNote {
-  const now = new Date().toISOString();
+  const now = getTimestamp();
   return {
     id: uuidv4(),
     projectId,
@@ -227,12 +258,15 @@ export function createResearchNote(projectId: string, title: string, category: s
 }
 
 export function createTag(projectId: string, name: string, color: string = "#8b5cf6", description: string = ""): Tag {
+  const now = getTimestamp();
   return {
     id: uuidv4(),
     projectId,
     name,
     color,
     description,
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -244,13 +278,16 @@ export function getProjectWithRelations(
   const project = workspace.projects.find((p) => p.id === projectId);
   if (!project) return null;
 
+  // Use a Set for chapter IDs to make scene filtering O(N) instead of O(N*M)
   const chapters = workspace.chapters
     .filter((c) => c.projectId === projectId)
     .sort((a, b) => a.order - b.order);
 
+  const chapterIds = new Set(chapters.map(c => c.id));
+  
   const scenes = workspace.scenes
-    .filter((s) => chapters.some((c) => c.id === s.chapterId))
-    .sort((a, b) => a.order - b.order);
+    .filter((s) => chapterIds.has(s.chapterId))
+    .sort((a, b) => a.order - b.order); // Scenes are often retrieved by order
 
   const codexEntries = workspace.codexEntries.filter((e) => e.projectId === projectId);
 
@@ -264,35 +301,25 @@ export function getProjectWithRelations(
 
 // Utility functions
 export function calculateWordCount(content: string): number {
-  if (!content || typeof content !== "string") return 0;
-  return content.trim().split(/\s+/).filter(Boolean).length;
+  if (!content || typeof content !== 'string') return 0;
+  // Fast regex-based count avoids massive array allocation in memory
+  let count = 0;
+  const regex = /\S+/g;
+  while (regex.exec(content)) count++;
+  return count;
 }
 
+/**
+ * High-performance character counter.
+ * Iterates manually to avoid large string allocations via .replace()
+ */
 export function calculateCharacterCount(content: string): number {
-  if (!content) return 0;
-  return content.replace(/\s/g, "").length;
-}
-
-// Export functions
-export function exportToTXT(project: ProjectWithRelations): string {
-  let content = `# ${project.title}\n\n`;
-  content += `Status: ${project.status}\n`;
-  content += `Target: ${project.targetWordCount} words\n\n`;
-  content += `---\n\n`;
-
-  for (const chapter of project.chapters) {
-    content += `## ${chapter.title}\n\n`;
-    const chapterScenes = project.scenes.filter((s) => s.chapterId === chapter.id);
-    
-    for (const scene of chapterScenes) {
-      content += `### ${scene.title}\n\n`;
-      content += scene.content + "\n\n";
+  if (!content || typeof content !== 'string') return 0;
+  let count = 0;
+  for (let i = 0; i < content.length; i++) {
+    if (content[i] !== ' ' && content[i] !== '\n' && content[i] !== '\r' && content[i] !== '\t') {
+      count++;
     }
   }
-
-  return content;
-}
-
-export function exportToJSON(project: ProjectWithRelations): string {
-  return JSON.stringify(project, null, 2);
+  return count;
 }

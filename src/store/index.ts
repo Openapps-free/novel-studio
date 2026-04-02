@@ -20,6 +20,8 @@ import {
 import {
   loadWorkspace,
   saveWorkspace,
+  loadSettings,
+  saveSettings,
   createProject,
   createChapter,
   createScene,
@@ -32,6 +34,8 @@ import {
   getProjectWithRelations,
   calculateWordCount,
 } from "../services/storage";
+
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 interface AppState {
   // Data
@@ -138,6 +142,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   apiKey: "",
   apiProvider: "openai",
   localModel: "llama3.1",
+  cloudModel: "gpt-4o-mini",
   fontSize: 18,
   fontFamily: "Georgia",
   lineHeight: 1.8,
@@ -147,7 +152,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   nanoWriMoMode: false,
   nanoWriMoTarget: 50000,
   dailyWords: 0,
-  lastWritingDate: new Date().toISOString().split("T")[0],
+  lastWritingDate: new Date().toISOString().split("T")[0] ?? "",
 };
 
 const DEFAULT_SESSION: WritingSession = {
@@ -186,8 +191,8 @@ export const useStore = create<AppState>((set, get) => ({
   initializeWorkspace: async () => {
     try {
       const workspace = await loadWorkspace();
-      const savedSettings = localStorage.getItem("novel-studio-settings");
-      const settings = savedSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) } : DEFAULT_SETTINGS;
+      const savedSettings = await loadSettings();
+      const settings = savedSettings ? { ...DEFAULT_SETTINGS, ...savedSettings } : DEFAULT_SETTINGS;
       
       set({ 
         workspace: {
@@ -205,23 +210,24 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  // Save workspace to storage
+  // Save workspace to storage (debounced)
   save: async () => {
-    set({ isSaving: true });
-    try {
-      await saveWorkspace(get().workspace);
-      localStorage.setItem("novel-studio-settings", JSON.stringify(get().settings));
-    } catch (error) {
-      console.error("Failed to save:", error);
-    } finally {
-      set({ isSaving: false });
-    }
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+      try {
+        const state = get();
+        await saveWorkspace(state.workspace);
+        await saveSettings(state.settings);
+      } catch (error) {
+        console.error("Failed to save:", error);
+      }
+    }, 500);
   },
 
   // Set workspace directly (for restore)
-  setWorkspaceDirect: (workspace) => {
-    const savedSettings = localStorage.getItem("novel-studio-settings");
-    const settings = savedSettings ? { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) } : DEFAULT_SETTINGS;
+  setWorkspaceDirect: async (workspace) => {
+    const savedSettings = await loadSettings();
+    const settings = savedSettings ? { ...DEFAULT_SETTINGS, ...savedSettings } : DEFAULT_SETTINGS;
     
     set({ 
       workspace: {
@@ -241,8 +247,7 @@ export const useStore = create<AppState>((set, get) => ({
   addProject: (title, type = "Novel") => {
     const project = createProject(title, type);
     const chapter = createChapter(project.id, "Chapter 1", 0);
-    const scene = createScene(chapter.id, "Opening Scene", 0);
-    scene.projectId = project.id;
+    const scene = createScene(chapter.id, "Opening Scene", 0, project.id);
     
     set((state) => ({
       workspace: {
@@ -283,11 +288,14 @@ export const useStore = create<AppState>((set, get) => ({
     
     if (get().selectedProjectId === id) {
       if (remainingProjects.length > 0) {
-        const firstProjectChapters = get().workspace.chapters.filter((c) => c.projectId === remainingProjects[0].id);
-        newChapterId = firstProjectChapters[0]?.id || null;
-        if (newChapterId) {
-          const chapterScenes = get().workspace.scenes.filter((s) => s.chapterId === newChapterId);
-          newSceneId = chapterScenes[0]?.id || null;
+        const firstProject = remainingProjects[0];
+        if (firstProject) {
+          const firstProjectChapters = get().workspace.chapters.filter((c) => c.projectId === firstProject.id);
+          newChapterId = firstProjectChapters[0]?.id || null;
+          if (newChapterId) {
+            const chapterScenes = get().workspace.scenes.filter((s) => s.chapterId === newChapterId);
+            newSceneId = chapterScenes[0]?.id || null;
+          }
         }
       } else {
         newChapterId = null;
@@ -336,8 +344,7 @@ export const useStore = create<AppState>((set, get) => ({
     
     const chapters = workspace.chapters.filter((c) => c.projectId === selectedProjectId);
     const chapter = createChapter(selectedProjectId, title, chapters.length);
-    const scene = createScene(chapter.id, "Opening Scene", 0);
-    scene.projectId = selectedProjectId;
+    const scene = createScene(chapter.id, "Opening Scene", 0, selectedProjectId);
     
     set((state) => ({
       workspace: {
@@ -374,9 +381,12 @@ export const useStore = create<AppState>((set, get) => ({
     
     if (get().selectedChapterId === id) {
       if (remainingChapters.length > 0) {
-        newChapterId = remainingChapters[0].id;
-        const chapterScenes2 = get().workspace.scenes.filter((s) => s.chapterId === newChapterId);
-        newSceneId = chapterScenes2[0]?.id || null;
+        const nextChapter = remainingChapters[0];
+        if (nextChapter) {
+          newChapterId = nextChapter.id;
+          const chapterScenes2 = get().workspace.scenes.filter((s) => s.chapterId === newChapterId);
+          newSceneId = chapterScenes2[0]?.id || null;
+        }
       } else {
         newChapterId = null;
         newSceneId = null;
@@ -410,10 +420,11 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({
       workspace: {
         ...state.workspace,
-        chapters: state.workspace.chapters.map((c) => ({
-          ...c,
-          order: chapterIds.indexOf(c.id),
-        })),
+        chapters: state.workspace.chapters.map((c) => 
+          chapterIds.includes(c.id)
+            ? { ...c, order: chapterIds.indexOf(c.id) }
+            : c
+        ),
       },
     }));
     get().save();
@@ -423,8 +434,7 @@ export const useStore = create<AppState>((set, get) => ({
   addScene: (chapterId, title = "New Scene") => {
     const scenes = get().workspace.scenes.filter((s) => s.chapterId === chapterId);
     const chapter = get().workspace.chapters.find((c) => c.id === chapterId);
-    const scene = createScene(chapterId, title, scenes.length);
-    if (chapter) scene.projectId = chapter.projectId;
+    const scene = createScene(chapterId, title, scenes.length, chapter?.projectId || "");
     
     set((state) => ({
       workspace: {
@@ -492,14 +502,15 @@ export const useStore = create<AppState>((set, get) => ({
     set({ selectedSceneId: id });
   },
 
-  reorderScenes: (_chapterId, sceneIds) => {
+  reorderScenes: (chapterId, sceneIds) => {
     set((state) => ({
       workspace: {
         ...state.workspace,
-        scenes: state.workspace.scenes.map((s) => ({
-          ...s,
-          order: sceneIds.indexOf(s.id),
-        })),
+        scenes: state.workspace.scenes.map((s) => 
+          s.chapterId === chapterId
+            ? { ...s, order: sceneIds.indexOf(s.id) }
+            : s
+        ),
       },
     }));
     get().save();
@@ -766,7 +777,7 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateDailyWords: (words: number) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0] ?? "";
     set((state) => ({
       settings: {
         ...state.settings,

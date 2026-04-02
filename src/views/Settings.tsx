@@ -62,6 +62,30 @@ export function SettingsView() {
             >
               📜 Sepia
             </button>
+            <button 
+              className={`theme-btn ${settings.theme === "midnight" ? "active" : ""}`} 
+              onClick={() => setTheme("midnight")}
+            >
+              🌑 Midnight
+            </button>
+            <button 
+              className={`theme-btn ${settings.theme === "zen" ? "active" : ""}`} 
+              onClick={() => setTheme("zen")}
+            >
+              🧘 Zen
+            </button>
+            <button 
+              className={`theme-btn ${settings.theme === "royal" ? "active" : ""}`} 
+              onClick={() => setTheme("royal")}
+            >
+              👑 Royal
+            </button>
+            <button 
+              className={`theme-btn ${settings.theme === "oled" ? "active" : ""}`} 
+              onClick={() => setTheme("oled")}
+            >
+              🖤 OLED
+            </button>
           </div>
         </div>
         <div className="setting-item">
@@ -129,8 +153,8 @@ export function SettingsView() {
           <div className="setting-item">
             <label>Cloud Model</label>
             <select 
-              value={settings.localModel}
-              onChange={(e) => updateSettings({ localModel: e.target.value })}
+              value={settings.cloudModel}
+              onChange={(e) => updateSettings({ cloudModel: e.target.value })}
             >
               {settings.apiProvider === "openai" && CLOUD_MODELS.filter(m => m.provider === "openai").map(m => (
                 <option key={m.id} value={m.id}>{m.name}</option>

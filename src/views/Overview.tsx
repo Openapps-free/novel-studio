@@ -3,7 +3,7 @@ import { calculateWordCount } from "../services/storage";
 import { WritingGoalsPanel } from "../components/WritingGoalsPanel";
 
 export function OverviewView() {
-  const { getProject, getProjectStats, updateProject, setCurrentView } = useStore();
+  const { getProject, getProjectStats, updateProject, setCurrentView, selectChapter, selectScene, workspace } = useStore();
   
   const project = getProject();
   const stats = getProjectStats();
@@ -127,7 +127,12 @@ export function OverviewView() {
                   .reduce((sum, s) => sum + calculateWordCount(s.content), 0);
                 const percent = stats?.wordCount ? (words / stats.wordCount) * 100 : 0;
                 return (
-                  <div key={chapter.id} className="chapter-card" onClick={() => setCurrentView("write")}>
+                  <div key={chapter.id} className="chapter-card" onClick={() => {
+                    selectChapter(chapter.id);
+                    const firstScene = workspace.scenes.find(s => s.chapterId === chapter.id);
+                    if (firstScene) selectScene(firstScene.id);
+                    setCurrentView("write");
+                  }}>
                     <span className="chapter-num">{idx + 1}</span>
                     <div className="chapter-info">
                       <span className="chapter-name">{chapter.title}</span>

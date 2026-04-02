@@ -40,8 +40,18 @@ export function ResearchView() {
     }
     setShowAddNote(false);
     setNewNote({ title: "", category: "general", content: "" });
-    const note = workspace.researchNotes.find(n => n.id === noteId);
-    if (note) setSelectedNote(note);
+    // Construct the note object with the data we have
+    const note: ResearchNote = {
+      id: noteId,
+      projectId: project.id,
+      title: newNote.title,
+      content: newNote.content,
+      category: newNote.category,
+      tags: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setSelectedNote(note);
   };
 
   if (!project) {

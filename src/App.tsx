@@ -2,6 +2,9 @@ import { useEffect, useMemo } from "react";
 import { useStore } from "./store";
 import { Layout } from "./components/Layout";
 import { Logo } from "./components/Logo";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ConfirmModal } from "./components/ConfirmModal";
+import { studioEngine } from "./CoreEngine";
 import { OverviewView } from "./views/Overview";
 import { WriteView } from "./views/Write";
 import { PlanView } from "./views/Plan";
@@ -25,6 +28,7 @@ export default function App() {
     workspace,
     selectProject,
     addProject,
+    save,
   } = useStore();
   
   useEffect(() => {
@@ -32,7 +36,44 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!settings.autoSaveInterval) return;
+    const interval = setInterval(() => {
+      save();
+    }, settings.autoSaveInterval);
+    return () => clearInterval(interval);
+  }, [settings.autoSaveInterval, save]);
+
+  useEffect(() => {
     document.documentElement.setAttribute("data-theme", settings.theme);
+    
+    const themeMap = {
+      dark: 'midnight',
+      light: 'classic',
+      sepia: 'sepia',
+      midnight: 'midnight',
+      zen: 'zen',
+      royal: 'royal',
+      oled: 'oled'
+    };
+    const coreTheme = themeMap[settings.theme] || 'classic';
+    
+    const profile = studioEngine.getThemeProfile(coreTheme as any);
+    const variableMap = {
+      '--studio-bg': '--bg-primary',
+      '--studio-surface': '--bg-secondary',
+      '--studio-text': '--text-primary',
+      '--studio-accent': '--accent-primary',
+      '--studio-border': '--border-subtle',
+      '--studio-shadow': null,
+      '--font-main': null,
+    };
+    
+    Object.entries(profile).forEach(([key, value]) => {
+      const cssVar = variableMap[key as keyof typeof variableMap];
+      if (cssVar) {
+        document.documentElement.style.setProperty(cssVar, value);
+      }
+    });
   }, [settings.theme]);
 
   const hasProjects = workspace.projects.length > 0;
@@ -111,5 +152,5 @@ export default function App() {
     );
   }
 
-  return <Layout>{viewContent}</Layout>;
+  return <Layout><ErrorBoundary>{viewContent}</ErrorBoundary><ConfirmModal /></Layout>;
 }

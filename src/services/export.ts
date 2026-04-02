@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
+import * as fflate from "fflate";
 import { ProjectWithRelations } from "../types";
 import { calculateWordCount } from "./storage";
 
@@ -15,8 +16,8 @@ export async function exportProject(
   project: ProjectWithRelations,
   format: ExportFormat
 ): Promise<ExportResult> {
-  const timestamp = new Date().toISOString().split("T")[0];
-  const safeTitle = project.title.replace(/[^a-zA-Z0-9]/g, "_");
+  const timestamp = new Date().toISOString().split("T")[0] || new Date().toISOString().slice(0, 10);
+  const safeTitle = (project.title || "Untitled").replace(/[^a-zA-Z0-9]/g, "_");
   
   switch (format) {
     case "pdf":
@@ -50,7 +51,7 @@ async function exportToPDF(
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
-  const lineHeight = 7;
+  const lineHeight = 10; // Increased for professional spacing
   let yPos = margin;
   
   const addPageIfNeeded = (neededSpace: number) => {
@@ -59,18 +60,19 @@ async function exportToPDF(
       yPos = margin;
     }
   };
-  
+
+  // Standard Manuscript Format: Courier
+  doc.setFont("courier", "normal");
+
   doc.setFontSize(24);
-  doc.setFont("helvetica", "bold");
+  doc.setFont("courier", "bold");
   const titleWidth = doc.getTextWidth(project.title);
   doc.text(project.title, (pageWidth - titleWidth) / 2, yPos);
   yPos += 15;
   
   doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
+  doc.setFont("courier", "normal");
   doc.setTextColor(100);
-  doc.text(`Target: ${project.targetWordCount} words`, pageWidth / 2, yPos, { align: "center" });
-  yPos += 10;
   doc.text(`Target: ${project.targetWordCount} words`, pageWidth / 2, yPos, { align: "center" });
   yPos += 15;
   
@@ -80,7 +82,7 @@ async function exportToPDF(
     addPageIfNeeded(20);
     
     doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
+    doc.setFont("courier", "bold");
     doc.text(chapter.title, margin, yPos);
     yPos += 12;
     
@@ -92,12 +94,12 @@ async function exportToPDF(
       addPageIfNeeded(10);
       
       doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
+      doc.setFont("courier", "bold");
       doc.text(scene.title, margin, yPos);
       yPos += 8;
       
       doc.setFontSize(11);
-      doc.setFont("helvetica", "normal");
+      doc.setFont("courier", "normal");
       
       const content = scene.content || "";
       const words = content.split(/\s+/);
@@ -375,18 +377,23 @@ function exportToEPUB(
   safeTitle: string,
   timestamp: string
 ): ExportResult {
-  const chapters = project.chapters.map(chapter => {
+  const chapterData = project.chapters.map(chapter => {
     const chapterScenes = project.scenes
       .filter(s => s.chapterId === chapter.id)
       .sort((a, b) => a.order - b.order);
     
-    return {
-      title: chapter.title,
-      scenes: chapterScenes.map(scene => ({
-        title: scene.title,
-        content: scene.content || ""
-      }))
-    };
+    let chapterBody = `  <h1>${escapeXML(chapter.title)}</h1>\n`;
+    chapterScenes.forEach(scene => {
+      chapterBody += `  <h2>${escapeXML(scene.title)}</h2>\n`;
+      const paragraphs = scene.content.split(/\n\n+/);
+      paragraphs.forEach(para => {
+        if (para.trim()) {
+          chapterBody += `  <p>${escapeXML(para.trim())}</p>\n`;
+        }
+      });
+    });
+    
+    return { title: chapter.title, body: chapterBody };
   });
 
   const epubContent = `<?xml version="1.0" encoding="UTF-8"?>
@@ -399,39 +406,36 @@ function exportToEPUB(
     <meta name="generator">Novel Studio</meta>
   </metadata>
   <manifest>
-    ${chapters.map((_, i) => `<item id="chapter${i}" href="chapter${i}.xhtml" media-type="application/xhtml+xml"/>`).join("\n    ")}
+    ${chapterData.map((_, i) => `<item id="chapter${i}" href="chapter${i}.xhtml" media-type="application/xhtml+xml"/>`).join("\n    ")}
   </manifest>
   <spine>
-    ${chapters.map((_, i) => `<itemref idref="chapter${i}"/>`).join("\n    ")}
+    ${chapterData.map((_, i) => `<itemref idref="chapter${i}"/>`).join("\n    ")}
   </spine>
 </package>`;
 
-  const chaptersContent = chapters.map((chapter) => {
-    let content = `<?xml version="1.0" encoding="UTF-8"?>
+  const epubData: Record<string, Uint8Array> = {
+    "mimetype": fflate.strToU8("application/epub+zip"),
+    "META-INF/container.xml": fflate.strToU8(`<?xml version="1.0" encoding="UTF-8"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`),
+    "content.opf": fflate.strToU8(epubContent),
+  };
+
+  chapterData.forEach((ch, i) => {
+    const xhtmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-  <title>${escapeXML(chapter.title)}</title>
+  <title>${escapeXML(ch.title)}</title>
 </head>
 <body>
-  <h1>${escapeXML(chapter.title)}</h1>
-`;
-    chapter.scenes.forEach(scene => {
-      content += `  <h2>${escapeXML(scene.title)}</h2>\n`;
-      const paragraphs = scene.content.split(/\n\n+/);
-      paragraphs.forEach(para => {
-        if (para.trim()) {
-          content += `  <p>${escapeXML(para.trim())}</p>\n`;
-        }
-      });
-    });
-    content += `</body>\n</html>`;
-    return content;
-  }).join("\n");
+${ch.body}
+</body>
+</html>`;
+    epubData[`chapter${i}.xhtml`] = fflate.strToU8(xhtmlContent);
+  });
 
-  const fullEpub = epubContent + "\n" + chaptersContent;
-  const blob = new Blob([fullEpub], { type: "application/epub+zip" });
-  
+  const zipped = fflate.zipSync(epubData);
+  const blob = new Blob([zipped], { type: "application/epub+zip" });
+
   return {
     blob,
     filename: `${safeTitle}_${timestamp}.epub`,

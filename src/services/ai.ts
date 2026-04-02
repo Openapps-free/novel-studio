@@ -1,4 +1,4 @@
-import { AIRequest, AIResponse, AppSettings, AIModelConfig } from "../types";
+import { AIRequest, AIResponse, AppSettings, AIModelConfig, CodexEntry } from "../types";
 
 const API_ENDPOINTS = {
   openai: "https://api.openai.com/v1/chat/completions",
@@ -7,29 +7,25 @@ const API_ENDPOINTS = {
   lmstudio: "http://localhost:1234/v1/chat/completions",
 };
 
+/**
+ * Enhanced metadata for UI rendering. 
+ * Includes colors and expected wait times for better UX feedback.
+ */
 export const AI_MODES = [
-  { id: "continue", label: "Continue Writing", description: "Continue the story naturally", icon: "➡️", category: "writing" },
-  { id: "expand", label: "Expand", description: "Add more detail and description", icon: "📝", category: "writing" },
-  { id: "rewrite", label: "Rewrite", description: "Rewrite with better flow and impact", icon: "✏️", category: "writing" },
-  { id: "summarize", label: "Summarize", description: "Create a brief summary", icon: "📋", category: "writing" },
-  { id: "dialogue", label: "Improve Dialogue", description: "Natural character conversations", icon: "💬", category: "writing" },
-  { id: "description", label: "Enhance Description", description: "Vivid sensory details", icon: "🎨", category: "writing" },
-  { id: "action", label: "Action Sequence", description: "Dynamic action choreography", icon: "⚡", category: "writing" },
-  { id: "emotion", label: "Emotional Depth", description: "Deeper emotional resonance", icon: "❤️", category: "writing" },
-  { id: "analyze", label: "Analyze Writing", description: "Get feedback and suggestions", icon: "🔍", category: "analysis" },
-  { id: "character_bio", label: "Character Bio", description: "Create detailed character profile", icon: "👤", category: "creation" },
-  { id: "backstory", label: "Backstory", description: "Develop character's history", icon: "📜", category: "creation" },
-  { id: "character_voice", label: "Character Voice", description: "Distinct voice for character", icon: "🎭", category: "creation" },
-  { id: "brainstorm", label: "Brainstorm Ideas", description: "Generate creative ideas", icon: "💡", category: "creation" },
-  { id: "plot_twist", label: "Plot Twist", description: "Unexpected story developments", icon: "🎲", category: "creation" },
-  { id: "conflict_ideas", label: "Conflict Ideas", description: "Create story tension", icon: "⚔️", category: "creation" },
-  { id: "scene_setup", label: "Scene Setup", description: "Establish setting and mood", icon: "🎬", category: "creation" },
-  { id: "chapter_summary", label: "Chapter Summary", description: "Recap chapter events", icon: "📑", category: "summary" },
-  { id: "outline", label: "Create Outline", description: "Structure scenes and chapters", icon: "🗂️", category: "planning" },
-  { id: "ending_suggestion", label: "Ending Options", description: "Possible story endings", icon: "🏁", category: "planning" },
-  { id: "title_suggestion", label: "Title Ideas", description: "Creative title suggestions", icon: "📖", category: "marketing" },
-  { id: "blurb", label: "Write Blurb", description: "Compelling book description", icon: "📢", category: "marketing" },
-  { id: "worldbuild", label: "World Building", description: "Develop setting and lore", icon: "🌍", category: "creation" },
+  { id: "continue", label: "Continue", description: "Natural extension of your current prose", icon: "➡️", category: "writing", color: "#3b82f6", effort: "low" },
+  { id: "expand", label: "Expand", description: "Flesh out details and descriptions", icon: "📝", category: "writing", color: "#60a5fa", effort: "low" },
+  { id: "rewrite", label: "Rewrite", description: "Improve flow, impact, and clarity", icon: "✏️", category: "writing", color: "#2563eb", effort: "medium" },
+  { id: "summarize", label: "Summarize", description: "Condense selection into key points", icon: "📋", category: "writing", color: "#94a3b8", effort: "low" },
+  { id: "dialogue", label: "Fix Dialogue", description: "Sharpen character voices and subtext", icon: "💬", category: "writing", color: "#8b5cf6", effort: "medium" },
+  { id: "description", label: "Atmosphere", description: "Inject vivid sensory immersion", icon: "🎨", category: "writing", color: "#ec4899", effort: "medium" },
+  { id: "action", label: "Action", description: "High-octane choreography", icon: "⚡", category: "writing", color: "#f59e0b", effort: "medium" },
+  { id: "analyze", label: "Analyze", description: "Structural and stylistic audit", icon: "🔍", category: "analysis", color: "#10b981", effort: "high" },
+  { id: "brainstorm", label: "Brainstorm", description: "Creative seeds and story angles", icon: "💡", category: "creation", color: "#facc15", effort: "medium" },
+  { id: "plot_twist", label: "Plot Twist", description: "Unexpected story pivots", icon: "🎲", category: "creation", color: "#ef4444", effort: "medium" },
+  { id: "character_bio", label: "Character Profile", description: "Deep-dive persona creation", icon: "👤", category: "creation", color: "#6366f1", effort: "high" },
+  { id: "worldbuild", label: "World Building", description: "Lore and setting development", icon: "🌍", category: "creation", color: "#065f46", effort: "high" },
+  { id: "outline", label: "Beat Outline", description: "Generate structural story beats", icon: "🗂️", category: "planning", color: "#475569", effort: "high" },
+  { id: "chapter_summary", label: "Recap", description: "Chapter-level executive summary", icon: "📑", category: "summary", color: "#64748b", effort: "medium" },
 ];
 
 export const LOCAL_MODELS: AIModelConfig[] = [
@@ -61,6 +57,16 @@ export const getModesByCategory = (category: string) => {
   return AI_MODES.filter(m => m.category === category);
 };
 
+/**
+ * Registry of AI provider implementations.
+ */
+const PROVIDER_HANDLERS: Record<string, (request: AIRequest, apiKey: string, systemPrompt: string, model: string) => Promise<AIResponse>> = {
+  openai: (req, key, sys, model) => callOpenAI(req, key, sys, model),
+  anthropic: (req, key, sys, model) => callAnthropic(req, key, sys, model),
+  ollama: (req, _key, sys, model) => callLocalAI(req, "ollama", model, sys),
+  lmstudio: (req, _key, sys, model) => callLocalAI(req, "lmstudio", model, sys),
+};
+
 export async function callAI(
   request: AIRequest,
   settings: AppSettings
@@ -69,41 +75,36 @@ export async function callAI(
 
   const isLocal = apiProvider === "ollama" || apiProvider === "lmstudio";
   
-  if (isLocal && !apiKey && apiProvider === "ollama") {
-    throw new Error("Please ensure Ollama is running. Start with: ollama serve");
-  }
-  
-  if (isLocal && !apiKey && apiProvider === "lmstudio") {
-    throw new Error("Please ensure LM Studio is running with server enabled.");
+  if (!isLocal && (!apiKey || apiKey.trim() === "")) {
+    throw new Error(`${apiProvider.toUpperCase()} API key is required. Please check your settings.`);
   }
 
-  const systemPrompt = getSystemPrompt(request.type);
+  const systemPrompt = getSystemPrompt(request.type || "analyze");
+  const model = isLocal ? localModel : settings.cloudModel || "gpt-4o-mini";
 
-  switch (apiProvider) {
-    case "openai":
-      return callOpenAI(request, apiKey, systemPrompt);
-    case "anthropic":
-      return callAnthropic(request, apiKey, systemPrompt);
-    case "ollama":
-      return callLocalAI(request, "ollama", localModel || "llama3.1", systemPrompt);
-    case "lmstudio":
-      return callLocalAI(request, "lmstudio", localModel || "llama3", systemPrompt);
-    default:
-      throw new Error("Unknown API provider");
+  const handler = PROVIDER_HANDLERS[apiProvider];
+  if (!handler) {
+    throw new Error(`Unsupported API provider: ${apiProvider}`);
   }
+
+  return handler(request, apiKey || "", systemPrompt, model || "");
 }
 
-function getSystemPrompt(type: string): string {
-  const prompts: Record<string, string> = {
-    continue: `You are a talented novelist. Continue the story naturally, matching the author's voice, tone, and pacing. Write seamless prose that flows from the existing text. Keep it to 2-4 paragraphs unless more is needed for a complete thought.`,
-    expand: `You are a descriptive writer. Expand the given text with rich sensory details, vivid imagery, and atmospheric depth. Add specifics that bring scenes to life while maintaining the author's voice.`,
+/**
+ * Professional Narrative Personas.
+ * Engineered to produce publication-ready prose by emphasizing "internalities," 
+ * rhythmic variation, and avoiding common AI linguistic tropes.
+ */
+const SYSTEM_PROMPTS: Record<string, string> = {
+    continue: `You are an elite literary ghostwriter. Mimic the author's prose style, vocabulary, and sentence rhythm exactly. Focus on character interiority and visceral sensory details. Avoid flowery "AI-isms" or summaries. Write the next 2-4 paragraphs as publication-ready fiction.`,
+    expand: `You are a master of atmospheric prose. Take the provided scene fragment and expand it using the "Show, Don't Tell" principle. Focus on sensory grounding (scent, texture, ambient sound) and the character's emotional reaction to the environment.`,
     summarize: `You are a concise writer. Create a brief, clear summary capturing the essential points, key events, and main ideas. Keep it to 1-2 paragraphs.`,
-    rewrite: `You are an expert editor. Rewrite the passage to improve clarity, flow, impact, and readability while PRESERVING the author's original voice and intent. Make it better, not different.`,
-    dialogue: `You are a dialogue specialist. Write natural, authentic conversations that reveal character personality, advance plot, and create tension. Make each character sound distinct.`,
-    description: `You are a descriptive prose master. Enhance the passage with vivid sensory details - what characters see, hear, smell, taste, and feel. Create atmosphere and mood through precise language.`,
+    rewrite: `You are a senior developmental editor. Tighten the prose, remove "filter words," and sharpen the emotional impact. Preserve the unique authorial voice while enhancing clarity and flow.`,
+    dialogue: `You are a dialogue specialist. Rewrite interactions to use subtext and distinct character idiolects. Ensure every line reveals character or advances the plot. Avoid redundant speech tags.`,
+    description: `You are a master of sensory immersion. Layer the scene with non-obvious details. Move beyond the visual; incorporate smell, sound, and tactile sensations to create a 3D world.`,
     action: `You are an action choreographer. Write dynamic, clear action sequences with good pacing. Use short punchy sentences for intensity, vary rhythm, and keep readers oriented in space.`,
-    emotion: `You are an emotional storyteller. Deepen the emotional resonance of the passage. Show character's inner feelings through physical reactions, thoughts, and subtext rather than telling directly.`,
-    analyze: `You are a story analyst and writing coach. Provide constructive feedback on: pacing, tension, character voice, dialogue quality, show-don't-tell, prose style, and areas for improvement. Be specific and actionable.`,
+    emotion: `You are a deep-character specialist. Deepen emotional resonance by showing internal landscape and cognitive dissonance. Use physiological reactions rather than naming the emotion directly.`,
+    analyze: `You are a professional literary analyst. Perform a deep audit of: Pacing, Prose Health (Filter Words), Sensory Density, and Narrative Tension. Provide actionable, high-level editorial feedback.`,
     brainstorm: `You are a creative collaborator. Generate innovative ideas, plot possibilities, character directions, and story angles. Think creatively and expansively. Provide 3-5 concrete options.`,
     outline: `You are a plot architect. Help structure scenes and chapters with clear beats: setup, conflict, escalation, climax, resolution. Keep outlines practical and actionable.`,
     worldbuild: `You are a world-building expert. Develop rich, immersive settings with history, culture, geography, politics, and details that make the world feel lived-in and believable.`,
@@ -117,60 +118,68 @@ function getSystemPrompt(type: string): string {
     ending_suggestion: `You are a narrative architect. Suggest 3-5 possible endings for this story that would be satisfying, considering: character arcs, thematic resolution, and reader expectations.`,
     title_suggestion: `You are a branding expert for books. Suggest 5-10 creative, marketable titles for this work. Consider: genre, tone, key themes, and target audience.`,
     blurb: `You are a marketing copywriter. Write a compelling blurb (100-200 words) that hooks readers, establishes tone, and teases the main conflict. Make it irresistible.`,
-  };
-  
-  return prompts[type] || prompts.analyze;
+};
+
+function getSystemPrompt(type: string): string {
+  return SYSTEM_PROMPTS[type] ?? SYSTEM_PROMPTS.analyze ?? "";
+}
+
+async function handleAIResponse(response: Response, providerName: string): Promise<Record<string, unknown>> {
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`${providerName} API error: ${error}`);
+  }
+  return response.json();
 }
 
 async function callOpenAI(
   request: AIRequest,
   apiKey: string,
-  systemPrompt: string
+  systemPrompt: string,
+  model: string
 ): Promise<AIResponse> {
-  const response = await fetch(API_ENDPOINTS.openai, {
+  const rawResponse = await fetch(API_ENDPOINTS.openai, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: request.prompt },
       ],
-      max_tokens: 2000,
+      max_tokens: request.maxTokens || 2000,
       temperature: 0.7,
     }),
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API error: ${error}`);
-  }
-
-  const data = await response.json();
+  const data = await handleAIResponse(rawResponse, "OpenAI") as any;
+  const choice = data.choices?.[0];
+  const message = choice?.message;
   return {
-    text: data.choices[0].message.content,
+    text: message?.content || "",
     tokens: data.usage?.total_tokens || 0,
-    model: data.model,
+    model: data.model || model,
   };
 }
 
 async function callAnthropic(
   request: AIRequest,
   apiKey: string,
-  systemPrompt: string
+  systemPrompt: string,
+  model: string
 ): Promise<AIResponse> {
   const response = await fetch(API_ENDPOINTS.anthropic, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
+      "anthropic-version": "2024-06-20",
     },
     body: JSON.stringify({
-      model: "claude-3-haiku-20240307",
+      model: model,
       max_tokens: 2000,
       system: systemPrompt,
       messages: [{ role: "user", content: request.prompt }],
@@ -185,7 +194,7 @@ async function callAnthropic(
   const data = await response.json();
   return {
     text: data.content[0].text,
-    tokens: data.usage?.input_tokens + data.usage?.output_tokens || 0,
+    tokens: (data.usage?.input_tokens || 0) + (data.usage?.output_tokens || 0),
     model: data.model,
   };
 }
@@ -222,7 +231,7 @@ async function callLocalAI(
 
   const data = await response.json();
   return {
-    text: data.choices[0].message.content,
+    text: data.choices?.[0]?.message?.content || "No response generated.",
     tokens: data.usage?.total_tokens || 0,
     model: data.model,
   };
@@ -234,50 +243,106 @@ export function hasAIConfigured(settings: AppSettings): boolean {
   return !!settings.apiKey && settings.apiKey.length > 0;
 }
 
+/**
+ * Truncates text to the last N words using a memory-efficient backward scan.
+ * Prevents massive array allocations on large novel scenes.
+ */
+function truncateToContextWindow(text: string, maxWords: number = 2000): string {
+  if (!text || text.length < 1000) return text;
+
+  let count = 0;
+  let i = text.length;
+
+  while (i > 0 && count < maxWords) {
+    // Skip current word
+    while (i > 0) {
+      const char = text[i - 1];
+      if (!char || /\s/.test(char)) break;
+      i--;
+    }
+    count++;
+    // Skip whitespace
+    while (i > 0) {
+      const char = text[i - 1];
+      if (!char || !/\s/.test(char)) break;
+      i--;
+    }
+  }
+
+  if (i === 0) return text;
+  return "... " + text.slice(i).trim();
+}
+
 export function generateAIPrompt(
   type: string,
   context: {
     sceneContent?: string;
     characterBio?: string;
+    codexEntries?: CodexEntry[];
     selectedText?: string;
     plotSummary?: string;
     chapterContext?: string;
     characterNames?: string[];
     characterName?: string;
     projectTitle?: string;
+    proseStyle?: string;
+    genre?: string;
+    tone?: string;
   }
 ): string {
-  const { sceneContent, characterBio, selectedText, plotSummary, chapterContext, characterNames, characterName, projectTitle } = context;
+  const { 
+    sceneContent, 
+    characterBio, 
+    codexEntries, 
+    selectedText, 
+    plotSummary, 
+    chapterContext, 
+    characterNames, 
+    characterName, 
+    projectTitle, 
+    proseStyle, 
+    genre,
+    tone 
+  } = context;
   
-  const characterContext = characterNames?.length ? `\nCharacters involved: ${characterNames.join(", ")}` : "";
-  const characterInfo = characterBio ? `\nCharacter background: ${characterBio}` : "";
-  const chapterInfo = chapterContext ? `\nChapter context: ${chapterContext}` : "";
-  const projectInfo = projectTitle ? `\nProject: ${projectTitle}` : "";
+  const charsPresent = characterNames?.length ? `\n### CHARACTERS PRESENT\n${characterNames.join(", ")}` : "";
+  const characterInfo = characterBio ? `\n### CHARACTER DOSSIER\n${characterBio}` : "";
+  const chapSynopsis = chapterContext ? `\n### CHAPTER SYNOPSIS\n${chapterContext}` : "";
+  const projectInfo = projectTitle ? `\n### PROJECT: ${projectTitle}` : "";
+  const metaInfo = (genre || tone) ? `\n### GENRE/TONE\n${genre || "General"} / ${tone || "Neutral"}` : "";
+  const styleInfo = proseStyle ? `\n### STYLE DIRECTIVE\n${proseStyle}` : "";
+
+  // Premium Feature: Codex/Wiki injection
+  const codexContext = codexEntries?.length 
+    ? `\n### WORLD LORE & CONTINUITY\n${codexEntries.map(e => `[${e.title}]: ${e.summary}`).join("\n")}`
+    : "";
+
+  // For huge projects, we window the scene content to the last 2500 words
+  // to ensure the AI stays focused and within token limits.
+  const activeContent = sceneContent ? truncateToContextWindow(sceneContent, 2500) : "";
 
   const prompts: Record<string, string> = {
-    continue: `Continue this story naturally from where it ends:${projectInfo}${chapterInfo}${characterContext}\n\nCurrent text:\n${sceneContent || ""}`,
-    expand: `Expand this passage with rich sensory details and description:${characterInfo}${chapterInfo}${projectInfo}\n\nPassage:\n${selectedText || sceneContent || ""}`,
-    summarize: `Create a concise summary of this content:\n\n${sceneContent || selectedText || ""}`,
-    rewrite: `Rewrite this passage to be more engaging and impactful:${characterInfo}${chapterInfo}${projectInfo}\n\nOriginal:\n${selectedText || sceneContent || ""}`,
-    dialogue: `Write or improve the dialogue in this passage. Make it natural, distinct for each character, and reveal character:${characterInfo}${characterContext}\n\nPassage:\n${selectedText || sceneContent || ""}`,
-    description: `Enhance this passage with vivid sensory details - sights, sounds, smells, textures, atmosphere:${chapterInfo}${projectInfo}\n\nPassage:\n${selectedText || sceneContent || ""}`,
-    action: `Improve this action sequence with dynamic pacing and clarity:${characterContext}\n\nPassage:\n${selectedText || sceneContent || ""}`,
-    emotion: `Deepen the emotional content of this passage. Show feelings through physical reactions, thoughts, and subtext:${characterInfo}${characterContext}\n\nPassage:\n${selectedText || sceneContent || ""}`,
-    analyze: `Analyze this writing for improvement. Cover: pacing, tension, dialogue quality, show-don't-tell, prose style, and specific suggestions:\n\n${sceneContent || selectedText || ""}`,
-    brainstorm: `Brainstorm creative ideas for this story:${projectInfo}${plotSummary ? `\nCurrent plot: ${plotSummary}` : ""}${chapterInfo}\n\n${sceneContent || ""}`,
-    outline: `Create a practical scene/chapter outline with beats:${projectInfo}${plotSummary ? `\nStory: ${plotSummary}` : ""}\n\n${sceneContent || "No content yet"}`,
-    worldbuild: `Develop this aspect of your world with rich detail:\n\n${sceneContent || selectedText || ""}`,
+    continue: `STORY CONTEXT:${projectInfo}${metaInfo}${chapSynopsis}${charsPresent}${codexContext}${styleInfo}\n\n### TASK\nSeamlessly continue the narrative. Match the rhythm and subtext. Avoid moralizing or repetitive sentence structures.\n\n### INPUT TEXT\n${activeContent}`,
+    expand: `STORY CONTEXT:${characterInfo}${codexContext}${styleInfo}\n\n### TASK\nFlesh out this scene fragment using visceral, sensory-rich prose. Focus on atmospheric micro-beats.\n\n### INPUT TEXT\n${selectedText || sceneContent || ""}`,
+    summarize: `### TASK\nCreate a brief, structurally sound summary of the following content:\n\n${activeContent || selectedText || ""}`,
+    rewrite: `### TASK\nAct as a Senior Developmental Editor. Polish this passage for maximum impact while preserving the unique authorial voice.\n\n${selectedText || activeContent}`,
+    dialogue: `### TASK\nWrite or improve the dialogue. Use subtext and distinct idiolects. Ensure every line advances the conflict.\n\n${selectedText || activeContent}`,
+    description: `### TASK\nLayer this scene with non-obvious sensory details. Focus on atmosphere, lighting, and visceral texture.\n\n${selectedText || activeContent}`,
+    analyze: `### TASK\nPerform a deep stylistic audit. Analyze pacing, sensory density, filter words, and emotional subtext.\n\n${activeContent || selectedText}`,
+    brainstorm: `STORY CONTEXT:${projectInfo}${plotSummary ? `\n### PLOT ARC\n${plotSummary}` : ""}${chapSynopsis}\n\n### TASK\nGenerate 3-5 innovative plot directions or twists that feel earned and high-stakes.\n\n${activeContent}`,
+    outline: `### TASK\nConstruct a scene outline using the Hero's Journey or 3-Act structure based on this context:\n\n${activeContent || "No content yet"}`,
+    worldbuild: `### TASK\nDevelop the history, culture, or physics of this world aspect with plausible, immersive depth:\n\n${activeContent || selectedText}`,
     character_bio: `Create a detailed character profile${characterName ? ` for ${characterName}` : ""}:${projectInfo}\n\nInclude: physical appearance, personality, background, motivations, fears, goals.`,
     backstory: `Develop a rich backstory${characterName ? ` for ${characterName}` : ""}:${projectInfo}${characterInfo}\n\nInclude formative events, key relationships, and secrets.`,
     character_voice: `Develop a distinct voice for${characterName ? ` ${characterName}` : " this character"}:${characterInfo}${projectInfo}\n\nWrite sample dialogue that captures their unique speech patterns.`,
     plot_twist: `Create surprising but believable plot twists:${projectInfo}${plotSummary ? `\nCurrent plot: ${plotSummary}` : ""}\n\nProvide 3-5 options that would shock readers but feel earned.`,
     conflict_ideas: `Generate conflict ideas that drive this story forward:${projectInfo}${plotSummary ? `\nCurrent plot: ${plotSummary}` : ""}\n\nInclude internal and external conflicts.`,
-    scene_setup: `Set the stage for this scene:${projectInfo}${chapterInfo}\n\nEstablish location, time, mood, and atmosphere.`,
+    scene_setup: `Set the stage for this scene:${projectInfo}${chapSynopsis}\n\nEstablish location, time, mood, and atmosphere.`,
     chapter_summary: `Create a concise summary of this chapter:${projectInfo}\n\nCapture main events, character developments, and key revelations.`,
     ending_suggestion: `Suggest possible endings for this story:${projectInfo}${plotSummary ? `\nStory: ${plotSummary}` : ""}\n\nConsider character arcs and thematic resolution.`,
     title_suggestion: `Suggest creative, marketable titles for "${projectTitle || "this work"}":\n\n${plotSummary ? `Plot: ${plotSummary}` : ""}\n\nProvide 5-10 options considering genre and tone.`,
     blurb: `Write a compelling blurb (100-200 words) for "${projectTitle || "this book"}":\n\n${plotSummary ? `Plot: ${plotSummary}` : ""}\n\nHook readers, establish tone, tease the conflict.`,
   };
   
-  return prompts[type] || prompts.analyze;
+  return prompts[type] ?? prompts.analyze ?? "";
 }

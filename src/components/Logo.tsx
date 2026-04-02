@@ -52,24 +52,3 @@ export function Logo({ size = 48 }: LogoProps) {
     </svg>
   );
 }
-
-export function LogoIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M7 17L7 9C7 8.44772 7.44772 8 8 8L16 8L19 11L19 17C19 17.5523 18.5523 18 18 18L8 18C7.44772 18 7 17.5523 7 17Z"
-        fill="currentColor"
-      />
-      <path
-        d="M7 9L5 17C4.75 17.75 5.25 18.5 6 18.5L7 18.5L7 9Z"
-        fill="var(--accent-secondary)"
-      />
-    </svg>
-  );
-}

@@ -4,6 +4,7 @@ import RichTextEditor from "../lib/RichTextEditor";
 import { calculateWordCount } from "../services/storage";
 import { callAI, hasAIConfigured, generateAIPrompt, AI_MODES } from "../services/ai";
 import { AIRequest } from "../types";
+import { showConfirm } from "../components/ConfirmModal";
 
 export function WriteView() {
   const { 
@@ -21,7 +22,7 @@ export function WriteView() {
   const project = getProject();
   const chapter = getCurrentChapter();
   const scene = workspace.scenes.find(s => s.id === selectedSceneId);
-  const settings = useStore.getState().settings;
+  const settings = useStore(s => s.settings);
   
   // AI State
   const [showAI, setShowAI] = useState(false);
@@ -47,27 +48,11 @@ export function WriteView() {
   const revisions = workspace.revisions.filter(r => r.sceneId === selectedSceneId);
   const sessionGoalProgress = Math.min(100, (writingSession.wordsWritten / (settings.sessionGoal || 500)) * 100);
 
-  // Start writing session when scene changes
   useEffect(() => {
     if (selectedSceneId && writingSession.sceneId !== selectedSceneId) {
       startWritingSession(selectedSceneId);
     }
   }, [selectedSceneId]);
-
-  // Sprint timer
-  useEffect(() => {
-    if (sprintActive && sprintTimeLeft > 0) {
-      sprintRef.current = setInterval(() => {
-        setSprintTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (sprintActive && sprintTimeLeft === 0) {
-      setSprintActive(false);
-      if (sprintRef.current) clearInterval(sprintRef.current);
-    }
-    return () => {
-      if (sprintRef.current) clearInterval(sprintRef.current);
-    };
-  }, [sprintActive, sprintTimeLeft]);
 
   const startSprint = () => {
     setSprintWords(0);
@@ -78,8 +63,36 @@ export function WriteView() {
 
   const stopSprint = () => {
     setSprintActive(false);
-    if (sprintRef.current) clearInterval(sprintRef.current);
+    if (sprintRef.current) {
+      clearInterval(sprintRef.current);
+      sprintRef.current = null;
+    }
   };
+
+  useEffect(() => {
+    if (!sprintActive || sprintTimeLeft <= 0) return;
+    
+    sprintRef.current = setInterval(() => {
+      setSprintTimeLeft(prev => {
+        if (prev <= 1) {
+          if (sprintRef.current) {
+            clearInterval(sprintRef.current);
+            sprintRef.current = null;
+          }
+          setSprintActive(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    
+    return () => {
+      if (sprintRef.current) {
+        clearInterval(sprintRef.current);
+        sprintRef.current = null;
+      }
+    };
+  }, [sprintActive]);
 
   const handleAI = async () => {
     if (!scene || !hasAIConfigured(settings)) {
@@ -91,7 +104,6 @@ export function WriteView() {
     try {
       const prompt = generateAIPrompt(aiMode, { 
         sceneContent: scene.content,
-        characterBio: scene.pov,
         chapterContext: chapter?.title,
       });
       const response = await callAI({ type: aiMode, prompt }, settings);
@@ -303,7 +315,7 @@ export function WriteView() {
             <div className="ai-mode-category">
               <span className="ai-category-label">📋 Summary & Planning</span>
               <div className="ai-modes-grid">
-                {AI_MODES.filter(m => m.category === "planning" || m.category === "summary" || m.category === "marketing").map(mode => (
+                {AI_MODES.filter(m => m.category === "planning" || m.category === "summary").map(mode => (
                   <button
                     key={mode.id}
                     onClick={() => setAiMode(mode.id as AIRequest["type"])}
@@ -401,10 +413,9 @@ export function WriteView() {
             <div className="sidebar-section">
               <h4>Revision History</h4>
               {revisions.slice(0, 10).map((rev) => (
-                <div key={rev.id} className="revision-item" onClick={() => {
-                  if (confirm(`Restore version from ${new Date(rev.createdAt).toLocaleString()}?`)) {
-                    updateScene(scene.id, { content: rev.content });
-                  }
+                <div key={rev.id} className="revision-item" onClick={async () => {
+                  const confirmed = await showConfirm("Restore Revision", `Restore version from ${new Date(rev.createdAt).toLocaleString()}?`);
+                  if (confirmed) updateScene(scene.id, { content: rev.content });
                 }}>
                   <span className="rev-time">{new Date(rev.createdAt).toLocaleString()}</span>
                   <span className="rev-words">{rev.wordCount.toLocaleString()} words</span>

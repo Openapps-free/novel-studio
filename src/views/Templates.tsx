@@ -3,7 +3,7 @@ import { useStore } from "../store";
 import { GENRE_TEMPLATES, getCategories } from "../services/templates";
 
 export function TemplatesView() {
-  const { getProject, addChapter, addScene, setCurrentView } = useStore();
+  const { getProject, addChapter, addScene, updateScene, setCurrentView } = useStore();
   const project = getProject();
   
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -25,12 +25,19 @@ export function TemplatesView() {
     setApplying(true);
     
     try {
-      for (const beat of template.beats) {
-        const chapterId = addChapter(beat.name);
-        addScene(chapterId, beat.description);
+      const firstChapterId = addChapter(template.name);
+      
+      for (let i = 0; i < template.beats.length; i++) {
+        const beat = template.beats[i];
+        if (!beat) continue;
+        const sceneId = addScene(firstChapterId, beat.name);
+        updateScene(sceneId, { 
+          summary: beat.description,
+          content: `## ${beat.name}\n\n*${beat.description}*\n\n**Prompt:** ${beat.prompt}\n\n---\n\n*Start writing your scene here...*`,
+        });
       }
       
-      alert(`Created ${template.beats.length} chapters from "${template.name}" template!`);
+      alert(`Created ${template.beats.length} scenes from "${template.name}" template in "${template.name}" chapter!`);
       setCurrentView("write");
     } catch (error) {
       console.error("Failed to apply template:", error);
