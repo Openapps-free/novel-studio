@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useStore } from "../store";
 import RichTextEditor from "../lib/RichTextEditor";
 import { calculateWordCount } from "../services/storage";
@@ -7,23 +7,52 @@ import { AIRequest } from "../types";
 import { showConfirm } from "../components/ConfirmModal";
 
 export function WriteView() {
-  const { 
-    workspace,
-    selectedSceneId,
-    getProject,
-    getCurrentChapter,
-    updateScene,
-    updateSettings,
-    writingSession,
-    updateSessionWords,
-    startWritingSession,
-  } = useStore();
+  // Get primitive values first
+  const selectedSceneId = useStore((s) => s.selectedSceneId);
+  const selectedProjectId = useStore((s) => s.selectedProjectId);
+  const selectedChapterId = useStore((s) => s.selectedChapterId);
+  const settings = useStore((s) => s.settings);
+  const writingSession = useStore((s) => s.writingSession);
   
-  const project = getProject();
-  const chapter = getCurrentChapter();
-  const scene = workspace.scenes.find(s => s.id === selectedSceneId);
-  const settings = useStore(s => s.settings);
+  // Get functions
+  const updateScene = useStore((s) => s.updateScene);
+  const updateSettings = useStore((s) => s.updateSettings);
+  const updateSessionWords = useStore((s) => s.updateSessionWords);
+  const setAIProcessing = useStore((s) => s.setAIProcessing);
   
+  // Get workspace data
+  const scenes = useStore((s) => s.workspace.scenes);
+  const chapters = useStore((s) => s.workspace.chapters);
+  const projects = useStore((s) => s.workspace.projects);
+  const revisions = useStore((s) => s.workspace.revisions);
+  
+  // Compute derived values with useMemo
+  const scene = useMemo(() => 
+    scenes.find((sc) => sc.id === selectedSceneId) || null,
+    [scenes, selectedSceneId]
+  );
+  
+  const project = useMemo(() => {
+    if (!selectedProjectId) return null;
+    const p = projects.find((proj) => proj.id === selectedProjectId);
+    if (!p) return null;
+    // Return a stable reference if data hasn't changed
+    return p;
+  }, [projects, selectedProjectId]);
+  
+  const chapter = useMemo(() => 
+    chapters.find((c) => c.id === selectedChapterId) || null,
+    [chapters, selectedChapterId]
+  );
+  
+  const sceneRevisions = useMemo(() => 
+    revisions.filter((r) => r.sceneId === selectedSceneId),
+    [revisions, selectedSceneId]
+  );
+
+  // Internal State for debounced UI
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // AI State
   const [showAI, setShowAI] = useState(false);
   const [aiMode, setAiMode] = useState<AIRequest["type"]>("continue");
@@ -31,12 +60,12 @@ export function WriteView() {
   const [aiResult, setAiResult] = useState("");
   const [aiError, setAiError] = useState("");
   const [aiInsertMode, setAiInsertMode] = useState<"replace" | "append">("append");
-  
+
   // UI State
   const [showRevisions, setShowRevisions] = useState(false);
   const [splitView, setSplitView] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
-  
+
   // Sprint State
   const [sprintActive, setSprintActive] = useState(false);
   const [sprintTime, setSprintTime] = useState(15);
@@ -44,15 +73,33 @@ export function WriteView() {
   const sprintRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [sprintTimeLeft, setSprintTimeLeft] = useState(0);
   const [sprintStartWords, setSprintStartWords] = useState(0);
-  
-  const revisions = workspace.revisions.filter(r => r.sceneId === selectedSceneId);
+
   const sessionGoalProgress = Math.min(100, (writingSession.wordsWritten / (settings.sessionGoal || 500)) * 100);
 
+  // Keyboard Shortcuts
   useEffect(() => {
-    if (selectedSceneId && writingSession.sceneId !== selectedSceneId) {
-      startWritingSession(selectedSceneId);
-    }
-  }, [selectedSceneId]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAI(false);
+        setShowRevisions(false);
+      }
+      // Power user shortcuts
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setShowAI(prev => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFocusMode(prev => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        // Manual save trigger if needed, though auto-save is active
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const startSprint = () => {
     setSprintWords(0);
@@ -70,7 +117,7 @@ export function WriteView() {
   };
 
   useEffect(() => {
-    if (!sprintActive || sprintTimeLeft <= 0) return;
+    if (!sprintActive) return;
     
     sprintRef.current = setInterval(() => {
       setSprintTimeLeft(prev => {
@@ -92,7 +139,7 @@ export function WriteView() {
         sprintRef.current = null;
       }
     };
-  }, [sprintActive]);
+  }, [sprintActive]); // Only depend on sprintActive, not sprintTimeLeft
 
   const handleAI = async () => {
     if (!scene || !hasAIConfigured(settings)) {
@@ -101,6 +148,7 @@ export function WriteView() {
     }
     setAiLoading(true);
     setAiError("");
+    setAIProcessing(true);
     try {
       const prompt = generateAIPrompt(aiMode, { 
         sceneContent: scene.content,
@@ -110,8 +158,10 @@ export function WriteView() {
       setAiResult(response.text);
     } catch (err: any) {
       setAiError(err.message || "AI request failed");
+    } finally {
+      setAIProcessing(false);
+      setAiLoading(false);
     }
-    setAiLoading(false);
   };
 
   const insertAIResult = (mode: "replace" | "append") => {
@@ -125,25 +175,31 @@ export function WriteView() {
     setAiResult("");
   };
 
-  const handleContentChange = (content: string) => {
-    if (!scene) return;
+  // Use a ref to track the latest scene to avoid dependency issues
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+  
+  const handleContentChange = useCallback((content: string) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     
-    const oldWords = calculateWordCount(scene.content);
-    const newWords = calculateWordCount(content);
-    
-    updateScene(scene.id, { content });
-    
-    // Track words written this session
-    if (newWords > oldWords) {
-      const delta = newWords - oldWords;
-      updateSessionWords(delta);
+    saveTimerRef.current = setTimeout(() => {
+      const currentScene = sceneRef.current;
+      if (!currentScene) return;
+      const oldWords = calculateWordCount(currentScene.content);
+      const newWords = calculateWordCount(content);
       
-      // Track sprint words
-      if (sprintActive) {
-        setSprintWords(newWords - sprintStartWords);
+      updateScene(currentScene.id, { content });
+      
+      if (newWords > oldWords) {
+        const delta = newWords - oldWords;
+        updateSessionWords(delta);
+        // Update sprint words if sprint is active
+        if (sprintActive) {
+          setSprintWords(newWords - sprintStartWords);
+        }
       }
-    }
-  };
+    }, 1000); // Debounce store updates by 1s
+  }, [sprintActive]); // Only depend on sprintActive now
 
   if (!project || !scene) {
     return (
@@ -157,9 +213,16 @@ export function WriteView() {
   }
 
   return (
-    <div className={`view write-view ${focusMode ? "focus-mode" : ""}`}>
+    <div 
+      className={`view write-view ${focusMode ? "focus-mode" : ""} ${settings.highContrastMode ? "high-contrast" : ""}`}
+      role="main"
+      aria-label="Manuscript Editor"
+    >
+      {/* Accessibility Skip Link */}
+      <a href="#main-editor" className="sr-only sr-only-focusable">Skip to editor</a>
+
       {/* Header */}
-      <div className="scene-header">
+      <header className="scene-header" role="banner">
         <div className="scene-breadcrumb">
           {project.title} / {chapter?.title} / <strong>{scene.title}</strong>
         </div>
@@ -168,11 +231,13 @@ export function WriteView() {
             className="scene-title-input"
             value={scene.title}
             onChange={(e) => updateScene(scene.id, { title: e.target.value })}
+            aria-label="Scene Title"
           />
           <select
             className="scene-status-select"
             value={scene.status}
             onChange={(e) => updateScene(scene.id, { status: e.target.value as any })}
+            aria-label="Scene Status"
           >
             <option value="outline">Outline</option>
             <option value="draft">Draft</option>
@@ -203,9 +268,9 @@ export function WriteView() {
           <button className={`tool-btn ${focusMode ? "active" : ""}`} onClick={() => setFocusMode(!focusMode)}>Focus</button>
           <button className={`tool-btn ${splitView ? "active" : ""}`} onClick={() => setSplitView(!splitView)}>Split</button>
           <button className={`tool-btn ${showRevisions ? "active" : ""}`} onClick={() => setShowRevisions(!showRevisions)}>History</button>
-          <button className={`tool-btn ai-btn ${showAI ? "active" : ""}`} onClick={() => setShowAI(!showAI)}>AI Assistant</button>
+          <button className={`tool-btn ai-btn ${showAI ? "active" : ""}`} onClick={() => setShowAI(!showAI)} aria-expanded={showAI}>AI Assistant</button>
         </div>
-      </div>
+      </header>
 
       {/* Sprint Bar */}
       {sprintActive && (
@@ -217,7 +282,6 @@ export function WriteView() {
           justifyContent: 'space-between',
           borderBottom: '1px solid var(--border-subtle)'
         }}>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <span style={{ fontWeight: '600', color: 'var(--accent-primary)' }}>🏃 Writing Sprint</span>
             <span style={{ fontSize: '24px', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
@@ -258,7 +322,11 @@ export function WriteView() {
 
       {/* AI Panel */}
       {showAI && (
-        <div className="ai-panel">
+        <section 
+          className="ai-panel" 
+          aria-label="AI Writing Assistant"
+          aria-live="polite"
+        >
           <div className="ai-panel-header">
             <h4>AI Writing Assistant</h4>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -329,14 +397,20 @@ export function WriteView() {
             </div>
           </div>
           
-          <button className="ai-submit-btn" onClick={handleAI} disabled={aiLoading}>
+          <button 
+            className="ai-submit-btn" 
+            onClick={handleAI} 
+            disabled={aiLoading} 
+            aria-busy={aiLoading}
+            tabIndex={0}
+          >
             {aiLoading ? "🤔 Thinking..." : `✨ ${AI_MODES.find(m => m.id === aiMode)?.label}`}
           </button>
           
-          {aiError && <div className="ai-error">{aiError}</div>}
+          {aiError && <div className="ai-error" role="alert">{aiError}</div>}
           
           {aiResult && (
-            <div className="ai-result-container">
+            <div className="ai-result-container" role="region" aria-label="AI Suggestion">
               <div className="ai-result">{aiResult}</div>
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <button className="btn btn-primary btn-sm" onClick={() => insertAIResult(aiInsertMode)}>
@@ -346,7 +420,7 @@ export function WriteView() {
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
 
       {/* Main Editor Area */}
@@ -412,7 +486,7 @@ export function WriteView() {
           {showRevisions && (
             <div className="sidebar-section">
               <h4>Revision History</h4>
-              {revisions.slice(0, 10).map((rev) => (
+              {sceneRevisions.slice(0, 10).map((rev) => (
                 <div key={rev.id} className="revision-item" onClick={async () => {
                   const confirmed = await showConfirm("Restore Revision", `Restore version from ${new Date(rev.createdAt).toLocaleString()}?`);
                   if (confirmed) updateScene(scene.id, { content: rev.content });
@@ -421,7 +495,7 @@ export function WriteView() {
                   <span className="rev-words">{rev.wordCount.toLocaleString()} words</span>
                 </div>
               ))}
-              {revisions.length === 0 && <p className="no-revisions">No revisions yet</p>}
+              {sceneRevisions.length === 0 && <p className="no-revisions">No revisions yet</p>}
             </div>
           )}
         </div>

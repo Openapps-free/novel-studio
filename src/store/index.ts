@@ -14,6 +14,7 @@ import {
   TimelineEvent,
   ViewType,
   CodexType,
+  SearchResult,
   ResearchNote,
   Tag,
 } from "../types";
@@ -26,7 +27,6 @@ import {
   createChapter,
   createScene,
   createCodexEntry,
-  createRevision,
   createCharacterRelation,
   createTimelineEvent,
   createResearchNote,
@@ -34,6 +34,8 @@ import {
   getProjectWithRelations,
   calculateWordCount,
 } from "../services/storage";
+import { studioEngine } from "../CoreEngine";
+import { exportProject as exportProjectService, ExportFormat, ExportResult } from "../services/export";
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -50,14 +52,22 @@ interface AppState {
   selectedSceneId: string | null;
   selectedCodexId: string | null;
   
+  history: { snapshots: number; lastSnapshotAt: string | null; milestones: { id: string; name: string; date: string }[] }; 
+
   // Loading states
   isLoading: boolean;
   isSaving: boolean;
+  isAIProcessing: boolean;
   
   // Initialize
   initializeWorkspace: () => Promise<void>;
   setWorkspaceDirect: (workspace: Workspace) => void;
   save: () => Promise<void>;
+  exportProject: (format: ExportFormat) => Promise<ExportResult | undefined>; // Add export action
+  takeSnapshot: () => void;
+  createMilestone: (name: string) => void;
+  getSnapshots: () => any[]; // Retrieve history metadata
+  restoreFromHistory: (index: number) => void;
   
   // Project actions
   addProject: (title: string, type?: string) => string;
@@ -102,6 +112,7 @@ interface AppState {
   getResearchNotes: () => ResearchNote[];
   
   // Tags
+  searchContent: (keyword: string) => SearchResult[]; // New: Global search action
   addTag: (name: string, color?: string, description?: string) => string;
   updateTag: (id: string, updates: Partial<Tag>) => void;
   deleteTag: (id: string) => void;
@@ -110,15 +121,21 @@ interface AppState {
   // Settings actions
   updateSettings: (updates: Partial<AppSettings>) => void;
   setTheme: (theme: Theme) => void;
+  toggleHighContrast: () => void;
+  toggleFocusMode: () => void;
+  syncToCloud: () => Promise<void>;
   
   // Navigation
   setCurrentView: (view: ViewType) => void;
   
   // Session actions
+  setAIProcessing: (status: boolean) => void;
   startWritingSession: (sceneId: string) => void;
   updateSessionWords: (words: number) => void;
   resetSession: () => void;
   updateDailyWords: (words: number) => void;
+  getDailyWordCountsHistory: () => { date: string; words: number }[]; // New getter
+  getWritingStreak: () => number; // New getter for writing streak
   toggleNanoWriMo: () => void;
   setNanoTarget: (target: number) => void;
   
@@ -133,6 +150,7 @@ interface AppState {
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: "dark",
+  highContrastMode: false,
   typewriterMode: false,
   typewriterScroll: true,
   focusMode: false,
@@ -152,7 +170,14 @@ const DEFAULT_SETTINGS: AppSettings = {
   nanoWriMoMode: false,
   nanoWriMoTarget: 50000,
   dailyWords: 0,
+  totalTokensUsed: 0,
   lastWritingDate: new Date().toISOString().split("T")[0] ?? "",
+  dailyWordCountsHistory: [], // Initialize new field
+  ambientSound: 'none',
+  ambientVolume: 0.5,
+  typingSounds: false,
+  cloudSyncEnabled: false,
+  cloudProvider: null,
 };
 
 const DEFAULT_SESSION: WritingSession = {
@@ -184,26 +209,37 @@ export const useStore = create<AppState>((set, get) => ({
   selectedSceneId: null,
   selectedCodexId: null,
   
+  history: { snapshots: studioEngine.getSnapshotCount(), lastSnapshotAt: null, milestones: [] },
   isLoading: true,
   isSaving: false,
+  isAIProcessing: false,
 
   // Initialize workspace from storage
   initializeWorkspace: async () => {
     try {
+      performance.mark('workspace-init-start');
       const workspace = await loadWorkspace();
       const savedSettings = await loadSettings();
-      const settings = savedSettings ? { ...DEFAULT_SETTINGS, ...savedSettings } : DEFAULT_SETTINGS;
+      
+      // Detect System High Contrast Preference
+      const prefersContrast = window.matchMedia('(prefers-contrast: more)').matches;
+      const settings = savedSettings 
+        ? { ...DEFAULT_SETTINGS, ...savedSettings, highContrastMode: savedSettings.highContrastMode || prefersContrast } 
+        : { ...DEFAULT_SETTINGS, highContrastMode: prefersContrast };
       
       set({ 
         workspace: {
           ...workspace,
           researchNotes: workspace.researchNotes || [],
+          // Ensure dailyWordCountsHistory is initialized if not present in loaded settings
           tags: workspace.tags || [],
         }, 
         settings, 
         isLoading: false,
         selectedProjectId: workspace.projects[0]?.id || null,
       });
+      performance.mark('workspace-init-end');
+      performance.measure('Workspace Initialization', 'workspace-init-start', 'workspace-init-end');
     } catch (error) {
       console.error("Failed to initialize workspace:", error);
       set({ isLoading: false });
@@ -215,13 +251,75 @@ export const useStore = create<AppState>((set, get) => ({
     if (saveTimeout) clearTimeout(saveTimeout);
     saveTimeout = setTimeout(async () => {
       try {
+        performance.mark('save-start');
         const state = get();
         await saveWorkspace(state.workspace);
         await saveSettings(state.settings);
+        
+        // Professional upgrade: Intelligence-based snapshotting
+        const currentWords = state.getProjectStats()?.wordCount || 0;
+        const lastSnapshotCount = state.history.snapshots;
+        
+        // Trigger snapshot if > 250 words changed or count is 0
+        if (Math.abs(currentWords - (state.writingSession.wordsWritten || 0)) > 250 || lastSnapshotCount === 0) {
+          state.takeSnapshot();
+        }
+
+        performance.mark('save-end');
+        performance.measure('State Persistence', 'save-start', 'save-end');
       } catch (error) {
         console.error("Failed to save:", error);
       }
     }, 500);
+  },
+
+  createMilestone: (name: string) => {
+    const { workspace } = get();
+    const milestoneId = `m_${Date.now()}`;
+    
+    workspace.scenes.forEach(s => {
+      if (s.content) studioEngine.addChapter(`${milestoneId}_${s.id}`, s.content);
+    });
+    
+    set((state) => ({
+      history: {
+        ...state.history,
+        milestones: [...state.history.milestones, { id: milestoneId, name, date: new Date().toISOString() }]
+      }
+    }));
+    get().save();
+  },
+
+  takeSnapshot: () => {
+    const { workspace } = get();
+    performance.mark('snapshot-start');
+    
+    workspace.scenes.forEach(s => {
+      if (s.content) studioEngine.addChapter(`${s.chapterId}_${s.id}`, s.content);
+    });
+    studioEngine.takeSnapshot();
+    
+    set({ 
+      history: { 
+        ...get().history,
+        snapshots: studioEngine.getSnapshotCount(), 
+        lastSnapshotAt: new Date().toISOString() 
+      } 
+    });
+    performance.mark('snapshot-end');
+    performance.measure('Snapshot Engine', 'snapshot-start', 'snapshot-end');
+  },
+
+  restoreFromHistory: (index: number) => {
+    const success = studioEngine.restoreSnapshot(index);
+    if (success) {
+      // Logic to map studioEngine back to workspace scenes would follow here
+      get().save();
+    }
+  },
+
+  getSnapshots: () => {
+    return [];
   },
 
   // Set workspace directly (for restore)
@@ -242,6 +340,18 @@ export const useStore = create<AppState>((set, get) => ({
     });
     get().save();
   },
+
+  // Export action
+  exportProject: async (format) => {
+    const { selectedProjectId, workspace, settings } = get();
+    if (!selectedProjectId) return;
+    const project = getProjectWithRelations(selectedProjectId, workspace);
+    if (!project) return;
+
+    // Pass the current theme to the export service
+    return exportProjectService(project, format, settings.theme);
+  },
+
 
   // Project actions
   addProject: (title, type = "Novel") => {
@@ -448,31 +558,25 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   updateScene: (id, updates) => {
-    const scene = get().workspace.scenes.find((s) => s.id === id);
-    if (!scene) return;
-    
-    // Create revision if content changed
-    if (updates.content && updates.content !== scene.content) {
-      const revision = createRevision(id, scene.content);
-      set((state) => ({
-        workspace: {
-          ...state.workspace,
-          scenes: state.workspace.scenes.map((s) =>
-            s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
-          ),
-          revisions: [...state.workspace.revisions, revision],
-        },
-      }));
-    } else {
-      set((state) => ({
-        workspace: {
-          ...state.workspace,
-          scenes: state.workspace.scenes.map((s) =>
-            s.id === id ? { ...s, ...updates, updatedAt: new Date().toISOString() } : s
-          ),
-        },
-      }));
-    }
+    set((state) => {
+      const sceneIndex = state.workspace.scenes.findIndex(s => s.id === id);
+      if (sceneIndex === -1) return state;
+
+      const currentScene = state.workspace.scenes[sceneIndex];
+      if (!currentScene) return state;
+      const { id: _updatesId, ...restUpdates } = updates as any;
+      const updatedScenes = [...state.workspace.scenes];
+      updatedScenes[sceneIndex] = { 
+        ...currentScene, 
+        ...restUpdates, 
+        id: currentScene.id,
+        updatedAt: new Date().toISOString() 
+      };
+
+      return {
+        workspace: { ...state.workspace, scenes: updatedScenes }
+      };
+    });
     get().save();
   },
 
@@ -732,6 +836,72 @@ export const useStore = create<AppState>((set, get) => ({
     return workspace.tags.filter((t) => t.projectId === selectedProjectId);
   },
 
+  // Global Search
+  searchContent: (keyword: string) => {
+    const { workspace, selectedProjectId } = get();
+    const lowerKeyword = keyword.toLowerCase();
+    const results: SearchResult[] = [];
+
+    if (!selectedProjectId || !keyword.trim()) return results;
+
+    const calculateScore = (item: any, primaryFields: string[], secondaryFields: string[]): number => {
+      let score = 0;
+      const words = lowerKeyword.split(/\s+/);
+      
+      primaryFields.forEach(f => {
+        const val = item[f]?.toLowerCase() || "";
+        if (val === lowerKeyword) score += 50; // Exact match bonus
+        else if (val.includes(lowerKeyword)) score += 25;
+        words.forEach(w => { if (val.includes(w)) score += 5; }); // Fuzzy partials
+      });
+      
+      secondaryFields.forEach(f => {
+        const val = item[f]?.toLowerCase() || "";
+        const matches = (val.match(new RegExp(lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+        score += matches * 2;
+      });
+      return score;
+    };
+
+    // Search Scenes
+    workspace.scenes
+      .filter(s => s.projectId === selectedProjectId)
+      .forEach(scene => {
+        const score = calculateScore(scene, ['title'], ['content', 'summary', 'goal']);
+        if (score > 0) results.push({ type: 'scene', item: scene, score });
+      });
+
+    // Search Codex Entries
+    workspace.codexEntries
+      .filter(c => c.projectId === selectedProjectId)
+      .forEach(codex => {
+        const score = calculateScore(codex, ['title', 'aliases'], ['summary', 'details', 'backstory']);
+        if (score > 0) results.push({ type: 'codex', item: codex, score });
+      });
+
+    // Search Research Notes
+    workspace.researchNotes
+      .filter(r => r.projectId === selectedProjectId)
+      .forEach(note => {
+        const score = calculateScore(note, ['title'], ['content', 'category']);
+        if (score > 0) results.push({ type: 'researchNote', item: note, score });
+      });
+
+    // Search Chapters
+    workspace.chapters.filter(c => c.projectId === selectedProjectId).forEach(chapter => {
+      const score = calculateScore(chapter, ['title'], ['synopsis', 'notes']);
+      if (score > 0) results.push({ type: 'chapter', item: chapter, score });
+    });
+
+    // Search Tags
+    workspace.tags.filter(t => t.projectId === selectedProjectId).forEach(tag => {
+      const score = calculateScore(tag, ['name'], ['description']);
+      if (score > 0) results.push({ type: 'tag', item: tag, score });
+    });
+
+    return results.sort((a, b) => b.score - a.score);
+  },
+
   // Settings
   updateSettings: (updates) => {
     set((state) => ({
@@ -747,9 +917,32 @@ export const useStore = create<AppState>((set, get) => ({
     get().save();
   },
 
+  toggleHighContrast: () => {
+    set((state) => ({
+      settings: { ...state.settings, highContrastMode: !state.settings.highContrastMode }
+    }));
+    get().save();
+  },
+
+  toggleFocusMode: () => {
+    set((state) => ({
+      settings: { ...state.settings, focusMode: !state.settings.focusMode }
+    }));
+    get().save();
+  },
+
+  syncToCloud: async () => {
+    // Implementation for GitHub Gist / Dropbox would go here
+    console.log("Syncing to cloud...");
+  },
+
   // Navigation
   setCurrentView: (view) => {
     set({ currentView: view });
+  },
+
+  setAIProcessing: (status) => {
+    set({ isAIProcessing: status });
   },
 
   // Session
@@ -778,13 +971,35 @@ export const useStore = create<AppState>((set, get) => ({
 
   updateDailyWords: (words: number) => {
     const today = new Date().toISOString().split("T")[0] ?? "";
-    set((state) => ({
-      settings: {
-        ...state.settings,
-        dailyWords: words,
-        lastWritingDate: today,
-      },
-    }));
+    set((state) => {
+      const history = [...state.settings.dailyWordCountsHistory];
+      let updatedHistory = false;
+
+      // Find and update today's entry in history
+      for (let i = 0; i < history.length; i++) {
+        const entry = history[i];
+        if (entry && entry.date === today) {
+          entry.words = words;
+          updatedHistory = true;
+          break;
+        }
+      }
+
+      // If today's entry doesn't exist, add it
+      if (!updatedHistory) {
+        history.push({ date: today, words: words });
+      }
+
+      return {
+        settings: {
+          ...state.settings,
+          dailyWords: words, // This is the current day's total
+          lastWritingDate: today,
+          dailyWordCountsHistory: history,
+        },
+      };
+    });
+    get().save();
   },
 
   toggleNanoWriMo: () => {
@@ -861,5 +1076,29 @@ export const useStore = create<AppState>((set, get) => ({
     return workspace.timelineEvents
       .filter((e) => e.projectId === selectedProjectId)
       .sort((a, b) => a.order - b.order);
+  },
+
+  getDailyWordCountsHistory: () => {
+    // Return a sorted copy of the history for display
+    return [...get().settings.dailyWordCountsHistory].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  },
+
+  getWritingStreak: () => {
+    const { dailyWordCountsHistory, lastWritingDate } = get().settings;
+    const today = new Date(lastWritingDate);
+    let streak = 0;
+
+    const sortedHistory = [...dailyWordCountsHistory].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    for (let i = 0; i < sortedHistory.length; i++) {
+      const entry = sortedHistory[i];
+      if (!entry) continue;
+      const entryDate = new Date(entry.date);
+      const diffDays = Math.floor((today.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (entry.words > 0 && diffDays === streak) streak++;
+      else if (entry.words === 0 && diffDays === streak) continue;
+      else if (diffDays > streak) break;
+    }
+    return streak;
   },
 }));

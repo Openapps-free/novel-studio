@@ -96,7 +96,7 @@ export async function callAI(
  * rhythmic variation, and avoiding common AI linguistic tropes.
  */
 const SYSTEM_PROMPTS: Record<string, string> = {
-    continue: `You are an elite literary ghostwriter. Mimic the author's prose style, vocabulary, and sentence rhythm exactly. Focus on character interiority and visceral sensory details. Avoid flowery "AI-isms" or summaries. Write the next 2-4 paragraphs as publication-ready fiction.`,
+    continue: `You are an elite literary ghostwriter. Mimic the author's prose style, vocabulary, and sentence rhythm exactly. Focus on character interiority, unspoken subtext, and visceral sensory details. Do NOT summarize or use flowery AI-isms like "a testament to" or "shrouded in mystery." Write publication-ready fiction.`,
     expand: `You are a master of atmospheric prose. Take the provided scene fragment and expand it using the "Show, Don't Tell" principle. Focus on sensory grounding (scent, texture, ambient sound) and the character's emotional reaction to the environment.`,
     summarize: `You are a concise writer. Create a brief, clear summary capturing the essential points, key events, and main ideas. Keep it to 1-2 paragraphs.`,
     rewrite: `You are a senior developmental editor. Tighten the prose, remove "filter words," and sharpen the emotional impact. Preserve the unique authorial voice while enhancing clarity and flow.`,
@@ -293,7 +293,7 @@ export function generateAIPrompt(
   const { 
     sceneContent, 
     characterBio, 
-    codexEntries, 
+    codexEntries: _codexEntries, 
     selectedText, 
     plotSummary, 
     chapterContext, 
@@ -312,17 +312,23 @@ export function generateAIPrompt(
   const metaInfo = (genre || tone) ? `\n### GENRE/TONE\n${genre || "General"} / ${tone || "Neutral"}` : "";
   const styleInfo = proseStyle ? `\n### STYLE DIRECTIVE\n${proseStyle}` : "";
 
-  // Premium Feature: Codex/Wiki injection
-  const codexContext = codexEntries?.length 
-    ? `\n### WORLD LORE & CONTINUITY\n${codexEntries.map(e => `[${e.title}]: ${e.summary}`).join("\n")}`
-    : "";
+  // Advanced RAG placeholder for future implementation
+  
+  const codexContext = "";
 
   // For huge projects, we window the scene content to the last 2500 words
-  // to ensure the AI stays focused and within token limits.
-  const activeContent = sceneContent ? truncateToContextWindow(sceneContent, 2500) : "";
+  // Increased window for high-end models to 3500 words
+  const activeContent = sceneContent ? truncateToContextWindow(sceneContent, 3500) : "";
+
+  const sceneMatrixInfo = context.sceneContent ? `
+### SCENE BEATS
+* GOAL: ${context.chapterContext || "Discover/Advance plot"}
+* CONFLICT: ${context.tone || "Emotional/Physical tension"}
+* EXPECTED OUTCOME: ${context.plotSummary || "Narrative progression"}
+` : "";
 
   const prompts: Record<string, string> = {
-    continue: `STORY CONTEXT:${projectInfo}${metaInfo}${chapSynopsis}${charsPresent}${codexContext}${styleInfo}\n\n### TASK\nSeamlessly continue the narrative. Match the rhythm and subtext. Avoid moralizing or repetitive sentence structures.\n\n### INPUT TEXT\n${activeContent}`,
+    continue: `STORY CONTEXT:${projectInfo}${metaInfo}${sceneMatrixInfo}${chapSynopsis}${charsPresent}${codexContext}${styleInfo}\n\n### TASK\nSeamlessly continue the narrative. You are currently in the ${context.genre || "story"} phase. Ensure the writing addresses the SCENE BEATS while maintaining the author's unique prose rhythm.\n\n### INPUT TEXT\n${activeContent}`,
     expand: `STORY CONTEXT:${characterInfo}${codexContext}${styleInfo}\n\n### TASK\nFlesh out this scene fragment using visceral, sensory-rich prose. Focus on atmospheric micro-beats.\n\n### INPUT TEXT\n${selectedText || sceneContent || ""}`,
     summarize: `### TASK\nCreate a brief, structurally sound summary of the following content:\n\n${activeContent || selectedText || ""}`,
     rewrite: `### TASK\nAct as a Senior Developmental Editor. Polish this passage for maximum impact while preserving the unique authorial voice.\n\n${selectedText || activeContent}`,

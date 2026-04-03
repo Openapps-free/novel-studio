@@ -3,7 +3,7 @@ import { calculateWordCount } from "../services/storage";
 import { WritingGoalsPanel } from "../components/WritingGoalsPanel";
 
 export function OverviewView() {
-  const { getProject, getProjectStats, updateProject, setCurrentView, selectChapter, selectScene, workspace } = useStore();
+  const { getProject, getProjectStats, updateProject, setCurrentView, selectChapter, selectScene, workspace, isSaving } = useStore();
   
   const project = getProject();
   const stats = getProjectStats();
@@ -24,17 +24,20 @@ export function OverviewView() {
       <div className="hero-card">
         <div className="hero-content">
           <div className="hero-header" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
+            {isSaving && <div className="saving-indicator">Saving...</div>}
             <input
               className="scene-title-input"
               value={project.title}
               onChange={(e) => updateProject(project.id, { title: e.target.value })}
               style={{ fontSize: '24px', fontWeight: '700', background: 'transparent', border: 'none', color: 'var(--text-primary)', flex: 1 }}
+              aria-label="Project Title"
             />
             <select
               className="status-select"
               value={project.status}
               onChange={(e) => updateProject(project.id, { status: e.target.value as any })}
               style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', padding: '8px 16px', borderRadius: 'var(--radius-md)', color: 'var(--text-primary)' }}
+              aria-label="Project Status"
             >
               <option value="drafting">Drafting</option>
               <option value="planning">Planning</option>

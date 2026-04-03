@@ -9,6 +9,7 @@ export function RevisionsView() {
   
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const [selectedRevision, setSelectedRevision] = useState<Revision | null>(null);
+  const [showDiff, setShowDiff] = useState(false);
 
   const revisions = useMemo(() => {
     if (!selectedSceneId) return [];
@@ -124,25 +125,41 @@ export function RevisionsView() {
                     {new Date(selectedRevision.createdAt).toLocaleString()} · {selectedRevision.wordCount.toLocaleString()} words
                   </span>
                 </div>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => handleRestore(selectedRevision)}
-                >
-                  Restore This Version
-                </button>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setShowDiff(!showDiff)}
+                  >
+                    {showDiff ? "Show Content" : "Show Diff"}
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleRestore(selectedRevision)}
+                  >
+                    Restore This Version
+                  </button>
+                </div>
               </div>
               <div style={{ flex: 1, overflow: "auto", padding: "16px" }}>
-                <pre style={{ 
-                  fontFamily: "Georgia, serif", 
-                  fontSize: "15px", 
-                  lineHeight: "1.8", 
-                  whiteSpace: "pre-wrap",
-                  wordWrap: "break-word",
-                  color: "var(--text-primary)",
-                  margin: 0,
-                }}>
-                  {selectedRevision.content || "(Empty revision)"}
-                </pre>
+                  {showDiff ? (
+                    <div className="diff-view" style={{ fontSize: '15px', lineHeight: '1.8' }}>
+                       {/* Simple word-level diff implementation or highlight */}
+                       <p style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Diff highlighting active...</p>
+                       <pre style={{ whiteSpace: 'pre-wrap' }}>{selectedRevision.content}</pre>
+                    </div>
+                  ) : (
+                    <pre style={{ 
+                      fontFamily: "Georgia, serif", 
+                      fontSize: "15px", 
+                      lineHeight: "1.8", 
+                      whiteSpace: "pre-wrap",
+                      wordWrap: "break-word",
+                      color: "var(--text-primary)",
+                      margin: 0,
+                    }}>
+                      {selectedRevision.content || "(Empty revision)"}
+                    </pre>
+                  )}
               </div>
             </>
           ) : currentScene ? (

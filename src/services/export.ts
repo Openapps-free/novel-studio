@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
 import * as fflate from "fflate";
-import { ProjectWithRelations } from "../types";
+import { ProjectWithRelations, AppSettings } from "../types";
 import { calculateWordCount } from "./storage";
 
 export type ExportFormat = "pdf" | "docx" | "epub" | "txt" | "json" | "html";
@@ -14,14 +14,15 @@ export interface ExportResult {
 
 export async function exportProject(
   project: ProjectWithRelations,
-  format: ExportFormat
+  format: ExportFormat,
+  theme: AppSettings['theme'] = 'light' // Add theme parameter with a default
 ): Promise<ExportResult> {
   const timestamp = new Date().toISOString().split("T")[0] || new Date().toISOString().slice(0, 10);
   const safeTitle = (project.title || "Untitled").replace(/[^a-zA-Z0-9]/g, "_");
   
   switch (format) {
     case "pdf":
-      return exportToPDF(project, safeTitle, timestamp);
+      return exportToPDF(project, safeTitle, timestamp, theme);
     case "docx":
       return exportToDOCX(project, safeTitle, timestamp);
     case "epub":
@@ -31,7 +32,7 @@ export async function exportProject(
     case "json":
       return exportToJSON(project, safeTitle, timestamp);
     case "html":
-      return exportToHTML(project, safeTitle, timestamp);
+      return exportToHTML(project, safeTitle, timestamp, theme);
     default:
       throw new Error(`Unsupported format: ${format}`);
   }
@@ -40,7 +41,8 @@ export async function exportProject(
 async function exportToPDF(
   project: ProjectWithRelations,
   safeTitle: string,
-  timestamp: string
+  timestamp: string,
+  theme: AppSettings['theme']
 ): Promise<ExportResult> {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -48,6 +50,10 @@ async function exportToPDF(
     format: "a4"
   });
   
+  const textColor = theme === 'dark' || theme === 'midnight' || theme === 'oled' ? '#FFFFFF' : '#000000';
+  // For PDF, setting a background for the entire document is more complex and usually done
+  // by drawing a rectangle on each page. For simplicity, we'll just set text color.
+
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 20;
@@ -63,6 +69,7 @@ async function exportToPDF(
 
   // Standard Manuscript Format: Courier
   doc.setFont("courier", "normal");
+  doc.setTextColor(textColor);
 
   doc.setFontSize(24);
   doc.setFont("courier", "bold");
@@ -72,11 +79,11 @@ async function exportToPDF(
   
   doc.setFontSize(12);
   doc.setFont("courier", "normal");
-  doc.setTextColor(100);
+  doc.setTextColor(textColor); // Use theme-aware color
   doc.text(`Target: ${project.targetWordCount} words`, pageWidth / 2, yPos, { align: "center" });
   yPos += 15;
   
-  doc.setTextColor(0);
+  doc.setTextColor(textColor); // Reset to main text color
   
   for (const chapter of project.chapters) {
     addPageIfNeeded(20);
@@ -279,8 +286,23 @@ function exportToJSON(
 function exportToHTML(
   project: ProjectWithRelations,
   safeTitle: string,
-  timestamp: string
+  timestamp: string,
+  theme: AppSettings['theme']
 ): ExportResult {
+  const isDarkTheme = theme === 'dark' || theme === 'midnight' || theme === 'oled';
+  const textColor = isDarkTheme ? '#E0E0E0' : '#333';
+  let backgroundColor = isDarkTheme ? '#1a1a1a' : '#FFFFFF';
+  let headingColor = isDarkTheme ? '#F0F0F0' : '#222';
+  let borderColor = isDarkTheme ? '#444' : '#ddd';
+
+  if (theme === 'midnight') {
+    backgroundColor = '#000033';
+    headingColor = '#ADD8E6'; // Light blue for headings
+  } else if (theme === 'oled') {
+    backgroundColor = '#000000';
+    headingColor = '#FFFFFF';
+  }
+
   const wordCount = project.scenes.reduce((sum, s) => sum + calculateWordCount(s.content), 0);
   
   let html = `<!DOCTYPE html>
@@ -296,12 +318,14 @@ function exportToHTML(
       margin: 0 auto;
       padding: 40px 20px;
       line-height: 1.8;
-      color: #333;
+      color: ${textColor};
+      background-color: ${backgroundColor};
     }
     h1 {
       font-size: 2.5em;
       text-align: center;
       margin-bottom: 10px;
+      color: ${headingColor};
     }
     .meta {
       text-align: center;
@@ -311,13 +335,14 @@ function exportToHTML(
     h2 {
       font-size: 1.8em;
       margin-top: 40px;
-      border-bottom: 1px solid #ddd;
+      border-bottom: 1px solid ${borderColor};
       padding-bottom: 10px;
+      color: ${headingColor};
     }
     h3 {
       font-size: 1.4em;
       margin-top: 30px;
-      color: #444;
+      color: ${headingColor};
     }
     p {
       margin-bottom: 1em;

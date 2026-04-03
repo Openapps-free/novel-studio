@@ -183,6 +183,7 @@ export interface ProjectWithRelations extends Project {
 // App Settings
 export interface AppSettings {
   theme: Theme;
+  highContrastMode: boolean;
   typewriterMode: boolean;
   typewriterScroll: boolean;
   focusMode: boolean;
@@ -202,7 +203,16 @@ export interface AppSettings {
   nanoWriMoMode: boolean;
   nanoWriMoTarget: number;
   dailyWords: number;
+  totalTokensUsed: number;
   lastWritingDate: string;
+  dailyWordCountsHistory: { date: string; words: number }[]; // New: Stores historical and current day's words
+  // UX Enhancements
+  ambientSound: 'none' | 'rain' | 'cafe' | 'forest';
+  ambientVolume: number;
+  typingSounds: boolean;
+  // Cloud Sync
+  cloudSyncEnabled: boolean;
+  cloudProvider: 'github' | 'dropbox' | null;
 }
 
 // Writing Session
@@ -317,7 +327,7 @@ export interface ExportOptions {
 }
 
 // Navigation
-export type ViewType = "overview" | "write" | "plan" | "codex" | "timeline" | "characters" | "tags" | "research" | "analyze" | "revisions" | "chat" | "settings" | "templates";
+export type ViewType = "overview" | "write" | "plan" | "codex" | "timeline" | "characters" | "tags" | "research" | "analyze" | "revisions" | "chat" | "settings" | "templates" | "stats";
 
 // Stats
 export interface ProjectStats {
@@ -331,4 +341,13 @@ export interface ProjectStats {
   characters: number;
   locations: number;
   timelineEvents: number;
+}
+
+// Search Results
+export type SearchResultType = "scene" | "codex" | "chapter" | "researchNote" | "tag";
+
+export interface SearchResult {
+  type: SearchResultType;
+  item: Scene | CodexEntry | Chapter | ResearchNote | Tag;
+  score: number;
 }

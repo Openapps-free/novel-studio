@@ -1,7 +1,8 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useMemo } from "react";
 import { useStore } from "../store";
 import { ViewType } from "../types";
 import { Logo } from "./Logo";
+import { SearchBar } from "./SearchBar";
 import { showConfirm } from "./ConfirmModal";
 
 interface LayoutProps {
@@ -19,6 +20,7 @@ const navItems: { id: ViewType; icon: string; label: string }[] = [
   { id: "research", icon: "📚", label: "Research" },
   { id: "templates", icon: "📋", label: "Templates" },
   { id: "analyze", icon: "📈", label: "Analyze" },
+  { id: "stats", icon: "📈", label: "Stats" },
   { id: "revisions", icon: "📜", label: "History" },
   { id: "chat", icon: "💬", label: "AI Chat" },
   { id: "settings", icon: "⚙️", label: "Settings" },
@@ -52,8 +54,15 @@ export function Layout({ children }: LayoutProps) {
   const [draggingChapter, setDraggingChapter] = useState<string | null>(null);
   const [dragOverChapter, setDragOverChapter] = useState<string | null>(null);
 
-  const project = workspace.projects.find(p => p.id === selectedProjectId);
-  const chapters = workspace.chapters.filter(c => c.projectId === selectedProjectId);
+  const project = useMemo(() => 
+    workspace.projects.find(p => p.id === selectedProjectId),
+    [workspace.projects, selectedProjectId]
+  );
+  
+  const chapters = useMemo(() => 
+    workspace.chapters.filter(c => c.projectId === selectedProjectId),
+    [workspace.chapters, selectedProjectId]
+  );
 
   const cycleTheme = () => {
     const themes: Array<"dark" | "light" | "sepia" | "midnight" | "zen" | "royal" | "oled"> = ["dark", "light", "sepia", "midnight", "zen", "royal", "oled"];
@@ -266,6 +275,7 @@ export function Layout({ children }: LayoutProps) {
             </span>
           </div>
           <div className="top-bar-right">
+            <SearchBar />
             <button className="icon-btn" onClick={cycleTheme} title="Toggle theme">
               {settings.theme === "dark" ? "🌙" : settings.theme === "light" ? "☀️" : "📜"}
             </button>
