@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Vite cache
+node_modules/.vite/
+
 # Build output
 dist/
 src-tauri/target/
