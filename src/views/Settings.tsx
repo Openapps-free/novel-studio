@@ -334,7 +334,7 @@ export function SettingsView() {
 
       <div className="settings-section about">
         <h3>About</h3>
-        <p className="about-text">Novel Studio v0.2.0</p>
+        <p className="about-text">Novel Studio v2.0.0</p>
         <p className="about-text">Professional Writing Environment</p>
       </div>
     </div>
